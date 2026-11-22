@@ -92,68 +92,6 @@
       flex-shrink: 0;
     }
 
-    .mic-btn {
-      width: 78px;
-      height: 78px;
-      margin: 4px auto 0;
-      border-radius: 999px;
-      border: none;
-      background: radial-gradient(circle at 30% 30%, #34d399, #059669);
-      color: #042014;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 10px 26px rgba(16, 185, 129, 0.28);
-      transition: transform 0.15s ease;
-    }
-
-    .mic-btn:active { transform: scale(0.95); }
-
-    .mic-btn.listening {
-      background: radial-gradient(circle at 30% 30%, #f87171, #dc2626);
-      color: #fff;
-      box-shadow: 0 0 0 10px rgba(239, 68, 68, 0.16), 0 12px 28px rgba(239, 68, 68, 0.35);
-      animation: pulse 1.25s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.04); }
-    }
-
-    .cmd-bar {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-      margin-top: 6px;
-    }
-
-    .cmd-input {
-      flex: 1;
-      min-width: 0;
-      border-radius: 13px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      padding: 10px 12px;
-      font-size: 14px;
-      color: var(--text);
-      outline: none;
-    }
-
-    .cmd-input:focus { border-color: rgba(16, 185, 129, 0.55); }
-
-    .btn-primary {
-      border-radius: 13px;
-      background: rgba(16, 185, 129, 0.18);
-      border: 1px solid rgba(16, 185, 129, 0.42);
-      padding: 0 14px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent-light);
-      cursor: pointer;
-    }
-
     .btn-ghost {
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.05);
@@ -162,17 +100,6 @@
       font-size: 11px;
       font-weight: 600;
       color: #d4d4d8;
-      cursor: pointer;
-    }
-
-    .btn-undo {
-      border-radius: 8px;
-      background: rgba(244, 63, 94, 0.14);
-      border: 1px solid rgba(244, 63, 94, 0.35);
-      padding: 2px 8px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #fda4af;
       cursor: pointer;
     }
 
@@ -257,7 +184,7 @@
       "use strict";
 
       const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCSi9U6OzTIlQrgIsz4VnHtknyAwBKWJt7xH1NwY7BRICud2_VGXoVCeFfNNq1-rQn/exec";
-      const STORAGE_KEY = "fatura_radar_entries_v6";
+      const STORAGE_KEY = "fatura_radar_entries_v7";
       const SYNC_TIMEOUT_MS = 4500;
       const AUTO_SYNC_INTERVAL_MS = 20000;
 
@@ -432,38 +359,32 @@
         syncStatus: r[8] || "synced"
       }));
 
-      function readLocal() {
+      function readCache() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
-          const arr = raw ? JSON.parse(raw) : [];
-          return Array.isArray(arr) ? arr : [];
+          const parsed = raw ? JSON.parse(raw) : null;
+          return Array.isArray(parsed) ? parsed : null;
         } catch (_) {
-          return [];
+          return null;
         }
       }
 
-      function saveLocal(list) {
+      function saveCache(list) {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (_) {}
       }
 
-      let addedEntries = readLocal();
-      let remoteEntries = null;
+      let remoteEntries = readCache();
       let selectedCategory = null;
-      let pendingRide = null;
-      let isListening = false;
-      let recognition = null;
       let syncState = "syncing";
       let isPulling = false;
       let lastSyncTime = "";
-      let feedbackText = 'Auto-sync ativo (20s). Fale ou digite: "42,50 mercado", "estorno 15 mercado" ou "Uber 32"';
-      let feedbackTone = "muted";
 
       function getAllEntries() {
         const remote = Array.isArray(remoteEntries) ? remoteEntries.slice().reverse() : [];
         const seenIds = new Set();
         const seenKeys = new Set();
         const out = [];
-        const sources = [addedEntries, remote, OFFICIAL_RECORDS];
+        const sources = [remote, OFFICIAL_RECORDS];
 
         for (let s = 0; s < sources.length; s++) {
           const arr = sources[s];
@@ -508,58 +429,6 @@
         return Object.values(map).sort((a, b) => b.total - a.total);
       }
 
-      function extractNumber(raw) {
-        const m = (raw || "").match(/(?:r\$\s*)?(\d+(?:[.,]\d{1,2})?)/i);
-        if (!m) return null;
-        let t = m[1];
-        if (t.includes(",") && t.includes(".")) t = t.replace(/\./g, "").replace(",", ".");
-        else if (t.includes(",")) t = t.replace(",", ".");
-        const v = parseFloat(t);
-        return Number.isFinite(v) && v > 0 ? roundCents(v) : null;
-      }
-
-      function parseCommand(rawInput) {
-        const clean = (rawInput || "").trim();
-        if (!clean) return null;
-        const norm = clean.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const absVal = extractNumber(norm);
-        if (!absVal) return null;
-
-        const isRefund = /\b(estorno|reembolso|devolucao|refund|creditado)\b/.test(norm);
-        const valor = isRefund ? -absVal : absVal;
-        const meioPagamento = /\bdebito\b/.test(norm) ? "Débito" : "Crédito";
-
-        const isRide = /\b(uber|99|corrida|taxi|ride)\b/.test(norm);
-        const isWork = /\b(trabalho|trabalhar|escritorio|reuniao|cliente|firma|servico)\b/.test(norm);
-        const isLeisure = /\b(lazer|festa|amigo|amigos|role|sair|passeio|bar|balada)\b/.test(norm);
-
-        if ((isRide || isWork || isLeisure) && !isRefund) {
-          if (isWork && !isLeisure) return { needsConfirm: false, valor, categoria: "Transporte", subtipo: "Trabalho", meioPagamento, desc: clean };
-          if (isLeisure && !isWork) return { needsConfirm: false, valor, categoria: "Transporte", subtipo: "Lazer", meioPagamento, desc: clean };
-          return { needsConfirm: true, valor, meioPagamento, desc: clean };
-        }
-
-        if (/\b(metro|cptm|onibus|passagem|bilhete|transporte)\b/.test(norm)) {
-          return { needsConfirm: false, valor, categoria: "Transporte", subtipo: "Trabalho", meioPagamento, desc: clean };
-        }
-        if (/\b(mercado|hortifruti|supermercado|feira|pomar|acougue|verdura|fruta|lopes)\b/.test(norm)) {
-          return { needsConfirm: false, valor, categoria: "Mercado / Hortifruti", subtipo: "", meioPagamento, desc: clean };
-        }
-        if (/\b(pizza|keeta|ifood|99food|restaurante|lanche|burger|hamburguer|sushi|japa|jantar|delivery|comida)\b/.test(norm)) {
-          return { needsConfirm: false, valor, categoria: "Restaurante / Delivery", subtipo: "", meioPagamento, desc: clean };
-        }
-        if (/\b(oxxo|pao|croissant|cafe|leite|conveniencia|americanas|maquina|vend perto|padaria|dia a dia|energetico|monster|red bull)\b/.test(norm)) {
-          return { needsConfirm: false, valor, categoria: "Conveniência / Dia a dia", subtipo: "", meioPagamento, desc: clean };
-        }
-        if (/\b(anthropic|claude|ia|ai|chatgpt|apple|netflix|canva|vivo|assinatura|app)\b/.test(norm)) {
-          return { needsConfirm: false, valor, categoria: "Assinaturas / IA / Apps", subtipo: "", meioPagamento, desc: clean };
-        }
-        if (/\b(farmacia|drogasil|remedio|saude|cabelo|hair|estetica|salao|medico|dentista)\b/.test(norm)) {
-          return { needsConfirm: false, valor, categoria: "Saúde / Cuidados", subtipo: "", meioPagamento, desc: clean };
-        }
-        return { needsConfirm: false, valor, categoria: "Compras / Presentes", subtipo: "", meioPagamento, desc: clean };
-      }
-
       async function fetchTimeout(url, opts) {
         const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
         const timer = ctrl ? setTimeout(() => ctrl.abort(), SYNC_TIMEOUT_MS) : null;
@@ -568,34 +437,6 @@
         } finally {
           if (timer) clearTimeout(timer);
         }
-      }
-
-      async function flushPendingQueue() {
-        const pending = addedEntries.filter(it => it.syncStatus !== "synced");
-        if (!pending.length) return;
-        try {
-          const res = await fetchTimeout(APPS_SCRIPT_URL, {
-            method: "POST",
-            redirect: "follow",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({
-              items: pending.map(it => ({
-                id: it.id,
-                date: it.data,
-                desc: it.estabelecimento,
-                val: it.valor,
-                cat: it.categoria,
-                subtipo: it.subtipo,
-                meioPagamento: it.meioPagamento,
-                origem: it.origem
-              }))
-            })
-          });
-          if (res && res.ok) {
-            pending.forEach(it => { it.syncStatus = "synced"; });
-            saveLocal(addedEntries);
-          }
-        } catch (_) {}
       }
 
       async function syncPull(silent) {
@@ -607,7 +448,6 @@
         }
 
         try {
-          await flushPendingQueue();
           const sep = APPS_SCRIPT_URL.includes("?") ? "&" : "?";
           const res = await fetchTimeout(APPS_SCRIPT_URL + sep + "t=" + Date.now(), {
             method: "GET",
@@ -627,17 +467,7 @@
               origem: String(r.origem || "Planilha"),
               syncStatus: "synced"
             }));
-
-            const knownKeys = new Set(remoteEntries.map(dedupKey));
-            let changed = false;
-            addedEntries.forEach(loc => {
-              if (knownKeys.has(dedupKey(loc)) && loc.syncStatus !== "synced") {
-                loc.syncStatus = "synced";
-                changed = true;
-              }
-            });
-            if (changed) saveLocal(addedEntries);
-
+            saveCache(remoteEntries);
             syncState = "synced";
             lastSyncTime = nowTimeBR();
           } else {
@@ -647,99 +477,6 @@
           syncState = "fallback";
         } finally {
           isPulling = false;
-          renderApp();
-        }
-      }
-
-      function addEntry(valor, categoria, subtipo, desc, meioPagamento) {
-        const entry = {
-          id: "VOZ-" + Date.now(),
-          data: todayBR(),
-          estabelecimento: desc,
-          valor: roundCents(valor),
-          categoria: categoria,
-          subtipo: subtipo || "",
-          meioPagamento: meioPagamento || "Crédito",
-          origem: "App Voz",
-          syncStatus: "pending"
-        };
-        addedEntries = [entry].concat(addedEntries);
-        saveLocal(addedEntries);
-        const label = subtipo ? categoria + " — " + subtipo : categoria;
-        feedbackText = (entry.valor < 0 ? "Estorno de " : "Registrado ") + formatBRL(Math.abs(entry.valor)) + " (" + entry.meioPagamento + ") em " + label + ".";
-        feedbackTone = "ok";
-        renderApp();
-        syncPull(true);
-      }
-
-      function removeLocalEntry(id) {
-        addedEntries = addedEntries.filter(it => it.id !== id);
-        saveLocal(addedEntries);
-        feedbackText = "Lançamento local removido.";
-        feedbackTone = "muted";
-        renderApp();
-      }
-
-      function processCommand(text) {
-        const parsed = parseCommand(text);
-        if (!parsed) {
-          feedbackText = 'Não identifiquei valor em "' + text + '". Ex.: "42,50 mercado" ou "estorno 15 mercado".';
-          feedbackTone = "warn";
-          renderApp();
-          return;
-        }
-        if (parsed.needsConfirm) {
-          pendingRide = parsed;
-          feedbackText = "Confirme se o transporte de " + formatBRL(parsed.valor) + " foi Trabalho ou Lazer.";
-          feedbackTone = "ok";
-          renderApp();
-          return;
-        }
-        addEntry(parsed.valor, parsed.categoria, parsed.subtipo, parsed.desc, parsed.meioPagamento);
-      }
-
-      function toggleVoice() {
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) {
-          feedbackText = "Microfone indisponível neste navegador. Use o campo abaixo.";
-          feedbackTone = "warn";
-          renderApp();
-          return;
-        }
-        if (isListening && recognition) {
-          try { recognition.stop(); } catch (_) {}
-          isListening = false;
-          renderApp();
-          return;
-        }
-        try {
-          recognition = new SR();
-          recognition.lang = "pt-BR";
-          recognition.interimResults = false;
-          isListening = true;
-          feedbackText = 'Ouvindo... fale ex.: "Uber 32 reais" ou "estorno 20 mercado".';
-          feedbackTone = "ok";
-          renderApp();
-
-          recognition.onresult = e => {
-            const said = e && e.results && e.results[0] && e.results[0][0] ? e.results[0][0].transcript : "";
-            isListening = false;
-            processCommand(said);
-          };
-          recognition.onerror = () => {
-            isListening = false;
-            feedbackText = "Não foi possível captar o áudio. Tente digitar.";
-            feedbackTone = "warn";
-            renderApp();
-          };
-          recognition.onend = () => {
-            if (isListening) { isListening = false; renderApp(); }
-          };
-          recognition.start();
-        } catch (_) {
-          isListening = false;
-          feedbackText = "Microfone bloqueado. Digite o lançamento abaixo.";
-          feedbackTone = "warn";
           renderApp();
         }
       }
@@ -785,41 +522,22 @@
 
         const recent = entries.slice(0, 5);
         const syncColor = syncState === "synced" ? "#34d399" : syncState === "syncing" ? "#38bdf8" : "#fbbf24";
-        const syncText = syncState === "synced" ? "Auto-sync OK" + (lastSyncTime ? " · " + lastSyncTime : "") : syncState === "syncing" ? "Sincronizando..." : "Cache Local + Auto-sync";
-        const fbColor = feedbackTone === "ok" ? "#6ee7b7" : feedbackTone === "warn" ? "#fcd34d" : "#9a9aa6";
-
-        const rideHtml = pendingRide ? `
-          <div class="card" style="background:linear-gradient(180deg,rgba(56,189,248,0.14),#121216);border-color:rgba(56,189,248,0.4);">
-            <div class="row-between" style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7dd3fc;">
-              <span>Corrida de Transporte</span>
-              <button type="button" class="btn-ghost" data-action="cancel-ride">Cancelar</button>
-            </div>
-            <div style="margin-top:8px;font-size:15px;font-weight:700;">Esse transporte de ${formatBRL(pendingRide.valor)} foi Trabalho ou Lazer?</div>
-            <div style="margin-top:2px;font-size:12px;color:#9a9aa6;">"${esc(pendingRide.desc)}"</div>
-            <div class="grid-2" style="margin-top:10px;">
-              <button type="button" class="btn-primary" style="padding:10px;background:rgba(56,189,248,0.2);border-color:rgba(56,189,248,0.45);color:#e0f2fe;" data-action="ride-work">Trabalho</button>
-              <button type="button" class="btn-primary" style="padding:10px;background:rgba(244,63,94,0.2);border-color:rgba(244,63,94,0.45);color:#ffe4e6;" data-action="ride-leisure">Lazer</button>
-            </div>
-          </div>` : "";
+        const syncText = syncState === "synced" ? "Auto-sync OK" + (lastSyncTime ? " · " + lastSyncTime : "") : syncState === "syncing" ? "Sincronizando..." : "Base + Auto-sync";
 
         const recentHtml = recent.map(it => {
           const badge = it.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>'
             : it.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>'
             : it.valor < 0 ? '<span class="badge-refund">Estorno</span>' : "";
-          const canUndo = String(it.id).startsWith("VOZ-");
           return `
             <div class="row-between tabular" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">
               <div style="min-width:0;display:flex;align-items:center;gap:8px;">
-                <span class="dot" style="background:${it.syncStatus === "synced" ? "#34d399" : "#fbbf24"};"></span>
+                <span class="dot" style="background:#34d399;"></span>
                 <div class="truncate">
                   <span style="font-weight:600;">${esc(it.estabelecimento)}</span>${badge}
                   <div style="font-size:10px;color:#71717a;">${esc(it.data)} · ${esc(it.categoria)} · ${esc(it.meioPagamento || "Crédito")}</div>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                <span style="font-weight:700;color:${it.valor < 0 ? "#6ee7b7" : "#f4f4f6"};">${formatBRL(it.valor)}</span>
-                ${canUndo ? `<button type="button" class="btn-undo" data-undo="${esc(it.id)}">Desfazer</button>` : ""}
-              </div>
+              <span style="font-weight:700;color:${it.valor < 0 ? "#6ee7b7" : "#f4f4f6"};flex-shrink:0;">${formatBRL(it.valor)}</span>
             </div>`;
         }).join("");
 
@@ -858,33 +576,15 @@
         }).join("");
 
         root.innerHTML = `
-          <div class="card" style="text-align:center;display:flex;flex-direction:column;gap:10px;">
+          <div class="card">
             <div class="row-between">
               <span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Fatura Radar — Nov 2026</span>
-              <span class="pill"><span class="dot" style="background:${syncColor};"></span><span>${syncText}</span></span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="pill"><span class="dot" style="background:${syncColor};"></span><span>${syncText}</span></span>
+                <button type="button" class="btn-ghost" data-action="refresh">${isPulling ? "..." : "Atualizar ↻"}</button>
+              </div>
             </div>
-            <button type="button" class="mic-btn ${isListening ? "listening" : ""}" data-action="mic" aria-label="Falar gasto">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="2" width="6" height="12" rx="3"></rect>
-                <path d="M5 10a7 7 0 0 0 14 0"></path>
-                <line x1="12" y1="19" x2="12" y2="22"></line>
-              </svg>
-            </button>
-            <div style="font-size:14px;font-weight:700;">${isListening ? "Ouvindo agora..." : "Toque para falar o gasto"}</div>
-            <div style="font-size:12px;line-height:1.4;color:${fbColor};">${esc(feedbackText)}</div>
-            <div class="cmd-bar">
-              <input id="cmdInput" class="cmd-input" type="text" placeholder='Ex.: "42,50 mercado" ou "estorno 15 mercado"' />
-              <button type="button" class="btn-primary" data-action="submit-cmd">Lançar</button>
-            </div>
-          </div>
-
-          ${rideHtml}
-
-          <div class="card">
-            <div class="row-between" style="margin-bottom:6px;">
-              <span style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#d4d4d8;">Últimos Lançamentos</span>
-              <button type="button" class="btn-ghost" data-action="refresh">${isPulling ? "Atualizando..." : "Atualizar ↻"}</button>
-            </div>
+            <div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9a9aa6;">Últimos Lançamentos</div>
             ${recentHtml}
           </div>
 
@@ -919,36 +619,9 @@
       }
 
       document.getElementById("app").addEventListener("click", e => {
-        const undoBtn = e.target.closest("[data-undo]");
-        if (undoBtn) {
-          e.stopPropagation();
-          removeLocalEntry(undoBtn.getAttribute("data-undo"));
-          return;
-        }
         const actionEl = e.target.closest("[data-action]");
-        if (actionEl) {
-          const act = actionEl.getAttribute("data-action");
-          if (act === "mic") toggleVoice();
-          else if (act === "refresh") syncPull(false);
-          else if (act === "submit-cmd") {
-            const inp = document.getElementById("cmdInput");
-            if (inp && inp.value.trim()) {
-              const val = inp.value;
-              inp.value = "";
-              processCommand(val);
-            }
-          } else if (act === "ride-work" && pendingRide) {
-            const r = pendingRide; pendingRide = null;
-            addEntry(r.valor, "Transporte", "Trabalho", r.desc + " (Trabalho)", r.meioPagamento);
-          } else if (act === "ride-leisure" && pendingRide) {
-            const r = pendingRide; pendingRide = null;
-            addEntry(r.valor, "Transporte", "Lazer", r.desc + " (Lazer)", r.meioPagamento);
-          } else if (act === "cancel-ride") {
-            pendingRide = null;
-            feedbackText = "Confirmação cancelada.";
-            feedbackTone = "muted";
-            renderApp();
-          }
+        if (actionEl && actionEl.getAttribute("data-action") === "refresh") {
+          syncPull(false);
           return;
         }
         const catEl = e.target.closest("[data-cat]");
@@ -956,15 +629,6 @@
           const name = decodeURIComponent(catEl.getAttribute("data-cat"));
           selectedCategory = selectedCategory === name ? null : name;
           renderApp();
-        }
-      });
-
-      document.getElementById("app").addEventListener("keydown", e => {
-        if (e.target && e.target.id === "cmdInput" && e.key === "Enter") {
-          e.preventDefault();
-          const val = e.target.value;
-          e.target.value = "";
-          if (val.trim()) processCommand(val);
         }
       });
 
