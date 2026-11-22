@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#09090b" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Fatura Radar — Controle Mensal Nov 2026</title>
   <style>
     :root {
@@ -18,14 +17,14 @@
       --text: #f4f4f6;
       --muted: #9a9aa6;
       --muted-2: #71717a;
-      --accent: #10b981;
-      --sky: #38bdf8;
-      --rose: #f43f5e;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     html, body {
       margin: 0;
@@ -107,7 +106,7 @@
       gap: 10px;
     }
 
-    .badge-work, .badge-leisure, .badge-refund {
+    .badge {
       display: inline-block;
       margin-left: 5px;
       padding: 1px 6px;
@@ -181,12 +180,12 @@
     (function () {
       "use strict";
 
-      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCSi9U6OzTIlQrgIsz4VnHtknyAwBKWJt7xH1NwY7BRICud2_VGXoVCeFfNNq1-rQn/exec";
-      const STORAGE_KEY = "fatura_radar_entries_v10";
-      const SYNC_TIMEOUT_MS = 6000;
-      const AUTO_SYNC_INTERVAL_MS = 20000;
+      var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCSi9U6OzTIlQrgIsz4VnHtknyAwBKWJt7xH1NwY7BRICud2_VGXoVCeFfNNq1-rQn/exec";
+      var STORAGE_KEY = "fatura_radar_entries_v11";
+      var SYNC_TIMEOUT_MS = 6000;
+      var AUTO_SYNC_INTERVAL_MS = 20000;
 
-      const CATEGORY_CAPS = {
+      var CATEGORY_CAPS = {
         "Mercado / Hortifruti": 600.00,
         "Assinaturas / IA / Apps": 350.00,
         "Restaurante / Delivery": 450.00,
@@ -196,7 +195,7 @@
         "Saúde / Cuidados": 150.00
       };
 
-      const CATEGORY_COLORS = {
+      var CATEGORY_COLORS = {
         "Mercado / Hortifruti": "#10b981",
         "Assinaturas / IA / Apps": "#8b5cf6",
         "Restaurante / Delivery": "#f97316",
@@ -206,7 +205,7 @@
         "Saúde / Cuidados": "#14b8a6"
       };
 
-      const FALLBACK_ITEMS = [
+      var FALLBACK_ITEMS = [
         ["1", "28/10/2026", "Ebn *Canva04816 - Parcela 9/12", 24.16, "Assinaturas / IA / Apps", "Recorrente", "Crédito", "Fatura Base"],
         ["2", "20/11/2026", "Apple.Com/Bill", 5.9, "Assinaturas / IA / Apps", "Assinatura", "Crédito", "Fatura Base"],
         ["3", "20/11/2026", "99food *Lopes Ponte Gr", 83.42, "Mercado / Hortifruti", "Compra do Mês", "Crédito", "Fatura Base"],
@@ -295,21 +294,6 @@
         ["86", "21/11/2026", "Energético (Débito)", 11.99, "Conveniência / Dia a dia", "Bebida / Débito", "Débito", "Chat Sync"]
       ];
 
-      function parseMoney(v) {
-        if (typeof v === "number") return Math.round(v * 100) / 100;
-        if (!v) return 0;
-        var s = String(v).split("R$").join("").trim();
-        var parts = s.split(" ");
-        s = parts.join("");
-        if (s.indexOf(",") !== -1 && s.indexOf(".") !== -1) {
-          s = s.split(".").join("").split(",").join(".");
-        } else if (s.indexOf(",") !== -1) {
-          s = s.split(",").join(".");
-        }
-        var n = parseFloat(s);
-        return isNaN(n) ? 0 : Math.round(n * 100) / 100;
-      }
-
       function roundCents(n) {
         return Math.round((Number(n) || 0) * 100) / 100;
       }
@@ -320,6 +304,19 @@
 
       function pad2(n) {
         return String(n).padStart(2, "0");
+      }
+
+      function parseMoney(v) {
+        if (typeof v === "number") return roundCents(v);
+        if (!v) return 0;
+        var s = String(v).split("R$").join("").split(" ").join("").trim();
+        if (s.indexOf(",") !== -1 && s.indexOf(".") !== -1) {
+          s = s.split(".").join("").split(",").join(".");
+        } else if (s.indexOf(",") !== -1) {
+          s = s.split(",").join(".");
+        }
+        var n = parseFloat(s);
+        return isNaN(n) ? 0 : roundCents(n);
       }
 
       function formatBRL(v) {
@@ -339,12 +336,19 @@
       function formatDateBR(raw) {
         if (!raw) return todayBR();
         var s = String(raw).trim();
-        var dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-        if (dmy) return pad2(dmy[1]) + "/" + pad2(dmy[2]) + "/" + dmy[3];
-        var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (iso) return iso[3] + "/" + iso[2] + "/" + iso[1];
-        var p = new Date(s);
-        return isNaN(p.getTime()) ? s : pad2(p.getDate()) + "/" + pad2(p.getMonth() + 1) + "/" + p.getFullYear();
+        var partsSlash = s.split("/");
+        if (partsSlash.length === 3 && partsSlash[2].length === 4) {
+          return pad2(partsSlash[0]) + "/" + pad2(partsSlash[1]) + "/" + partsSlash[2];
+        }
+        var isoPart = s.split("T")[0].split("-");
+        if (isoPart.length === 3 && isoPart[0].length === 4) {
+          return pad2(isoPart[2]) + "/" + pad2(isoPart[1]) + "/" + isoPart[0];
+        }
+        var dt = new Date(s);
+        if (!isNaN(dt.getTime())) {
+          return pad2(dt.getDate()) + "/" + pad2(dt.getMonth() + 1) + "/" + dt.getFullYear();
+        }
+        return s;
       }
 
       function sortDateDesc(a, b) {
@@ -374,13 +378,15 @@
           var raw = localStorage.getItem(STORAGE_KEY);
           var parsed = raw ? JSON.parse(raw) : null;
           return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
-        } catch (_) {
+        } catch (err) {
           return null;
         }
       }
 
       function saveCache(list) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (_) {}
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch (err) {}
       }
 
       var remoteEntries = readCache();
@@ -402,10 +408,16 @@
             return toCents(it.valor) !== 0;
           })
           .map(function (it) {
-            return Object.assign({}, it, {
+            return {
+              id: it.id,
               data: formatDateBR(it.data),
-              valor: roundCents(it.valor)
-            });
+              estabelecimento: String(it.estabelecimento || "").trim(),
+              valor: roundCents(it.valor),
+              categoria: String(it.categoria || "Compras / Presentes").trim(),
+              subtipo: String(it.subtipo || "").trim(),
+              meioPagamento: String(it.meioPagamento || "Crédito").trim(),
+              origem: String(it.origem || "Planilha").trim()
+            };
           })
           .sort(sortDateDesc);
       }
@@ -429,14 +441,20 @@
           map[cat].count += 1;
           map[cat].items.push(it);
         }
-        return Object.values(map).sort(function (a, b) { return b.total - a.total; });
+        return Object.keys(map)
+          .map(function (k) { return map[k]; })
+          .sort(function (a, b) { return b.total - a.total; });
       }
 
       async function fetchTimeout(url, opts) {
         var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
         var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, SYNC_TIMEOUT_MS) : null;
         try {
-          return await fetch(url, Object.assign({}, opts || {}, ctrl ? { signal: ctrl.signal } : {}));
+          var cfg = opts || {};
+          if (ctrl) {
+            cfg.signal = ctrl.signal;
+          }
+          return await fetch(url, cfg);
         } finally {
           if (timer) clearTimeout(timer);
         }
@@ -495,7 +513,7 @@
           } else {
             syncState = "fallback";
           }
-        } catch (_) {
+        } catch (err) {
           syncState = "fallback";
         } finally {
           isPulling = false;
@@ -503,29 +521,72 @@
         }
       }
 
+      function el(tag, className, text) {
+        var node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null) node.textContent = String(text);
+        return node;
+      }
+
       function buildDonutSVG(categories, total) {
-        var r = 74, cx = 105, cy = 105, circ = 2 * Math.PI * r;
+        var svgNS = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("width", "210");
+        svg.setAttribute("height", "210");
+        svg.setAttribute("viewBox", "0 0 210 210");
+
+        var r = 74;
+        var cx = 105;
+        var cy = 105;
+        var circ = 2 * Math.PI * r;
         var offset = 0;
-        var segs = categories.map(function (cat) {
+
+        for (var i = 0; i < categories.length; i++) {
+          var cat = categories[i];
           var val = Math.max(0, cat.total);
           var frac = total > 0 ? val / total : 0;
           var dash = frac * circ;
           var gap = Math.max(0, circ - dash);
           var active = selectedCategory === cat.name;
-          var opacity = selectedCategory && !active ? 0.35 : 1;
-          var circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + cat.color + '" stroke-width="' + (active ? 24 : 20) + '" stroke-dasharray="' + dash.toFixed(2) + ' ' + gap.toFixed(2) + '" stroke-dashoffset="' + (-offset).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" opacity="' + opacity + '" style="cursor:pointer" data-cat="' + encodeURIComponent(cat.name) + '" />';
+          var opacity = selectedCategory && !active ? "0.35" : "1";
+
+          var circle = document.createElementNS(svgNS, "circle");
+          circle.setAttribute("cx", String(cx));
+          circle.setAttribute("cy", String(cy));
+          circle.setAttribute("r", String(r));
+          circle.setAttribute("fill", "none");
+          circle.setAttribute("stroke", cat.color);
+          circle.setAttribute("stroke-width", active ? "24" : "20");
+          circle.setAttribute("stroke-dasharray", dash.toFixed(2) + " " + gap.toFixed(2));
+          circle.setAttribute("stroke-dashoffset", (-offset).toFixed(2));
+          circle.setAttribute("transform", "rotate(-90 " + cx + " " + cy + ")");
+          circle.setAttribute("opacity", opacity);
+          circle.style.cursor = "pointer";
+          (function (catName) {
+            circle.addEventListener("click", function () {
+              selectedCategory = selectedCategory === catName ? null : catName;
+              renderApp();
+            });
+          })(cat.name);
+
+          svg.appendChild(circle);
           offset += dash;
-          return circle;
-        }).join("");
-        return '<svg width="210" height="210" viewBox="0 0 210 210">' + segs + "</svg>";
+        }
+
+        return svg;
       }
 
-      function esc(s) {
-        return String(s || "")
-          .split("&").join("&")
-          .split("<").join("<")
-          .split(">").join(">")
-          .split('"').join(""");
+      function createBadge(subtipo, valor) {
+        if (subtipo === "Trabalho") {
+          return el("span", "badge badge-work", "Trabalho");
+        }
+        if (subtipo === "Lazer") {
+          return el("span", "badge badge-leisure", "Lazer");
+        }
+        if (valor < 0) {
+          return el("span", "badge badge-refund", "Estorno");
+        }
+        return null;
       }
 
       function renderApp() {
@@ -534,130 +595,313 @@
 
         var entries = getAllEntries();
         var grandTotal = roundCents(entries.reduce(function (s, x) { return s + x.valor; }, 0));
-        var debitTotal = roundCents(entries.filter(function (x) { return String(x.meioPagamento).toLowerCase() === "débito"; }).reduce(function (s, x) { return s + x.valor; }, 0));
+        var debitTotal = roundCents(entries.filter(function (x) {
+          return String(x.meioPagamento).toLowerCase() === "débito";
+        }).reduce(function (s, x) { return s + x.valor; }, 0));
         var creditTotal = roundCents(grandTotal - debitTotal);
 
         var cats = groupCategories(entries);
-        var activeCat = cats.find(function (c) { return c.name === selectedCategory; });
-        var workTotal = roundCents(entries.filter(function (x) { return x.categoria === "Transporte" && x.subtipo === "Trabalho"; }).reduce(function (s, x) { return s + x.valor; }, 0));
-        var leisureTotal = roundCents(entries.filter(function (x) { return x.categoria === "Transporte" && x.subtipo === "Lazer"; }).reduce(function (s, x) { return s + x.valor; }, 0));
+        var activeCat = null;
+        for (var i = 0; i < cats.length; i++) {
+          if (cats[i].name === selectedCategory) {
+            activeCat = cats[i];
+            break;
+          }
+        }
+
+        var workTotal = roundCents(entries.filter(function (x) {
+          return x.categoria === "Transporte" && x.subtipo === "Trabalho";
+        }).reduce(function (s, x) { return s + x.valor; }, 0));
+
+        var leisureTotal = roundCents(entries.filter(function (x) {
+          return x.categoria === "Transporte" && x.subtipo === "Lazer";
+        }).reduce(function (s, x) { return s + x.valor; }, 0));
+
+        var syncColor = syncState === "synced" ? "#34d399" : (syncState === "syncing" ? "#38bdf8" : "#fbbf24");
+        var syncText = syncState === "synced"
+          ? "Planilha OK" + (lastSyncTime ? " · " + lastSyncTime : "")
+          : (syncState === "syncing" ? "Sincronizando..." : "Cache Local");
+
+        root.textContent = "";
+
+        var topCard = el("div", "card");
+        var headerRow = el("div", "row-between");
+        var titleSpan = el("span", "", "Fatura Radar — Nov 2026");
+        titleSpan.style.fontSize = "11px";
+        titleSpan.style.fontWeight = "800";
+        titleSpan.style.letterSpacing = ".06em";
+        titleSpan.style.textTransform = "uppercase";
+        titleSpan.style.color = "#34d399";
+
+        var rightControls = el("div", "");
+        rightControls.style.display = "flex";
+        rightControls.style.alignItems = "center";
+        rightControls.style.gap = "6px";
+
+        var pill = el("span", "pill");
+        var dot = el("span", "dot");
+        dot.style.background = syncColor;
+        pill.appendChild(dot);
+        pill.appendChild(el("span", "", syncText));
+
+        var refreshBtn = el("button", "btn-ghost", isPulling ? "..." : "Atualizar ↻");
+        refreshBtn.type = "button";
+        refreshBtn.addEventListener("click", function () {
+          syncPull(false);
+        });
+
+        rightControls.appendChild(pill);
+        rightControls.appendChild(refreshBtn);
+        headerRow.appendChild(titleSpan);
+        headerRow.appendChild(rightControls);
+        topCard.appendChild(headerRow);
+
+        var recentLabel = el("div", "", "Últimos Lançamentos");
+        recentLabel.style.marginTop = "10px";
+        recentLabel.style.fontSize = "11px";
+        recentLabel.style.fontWeight = "700";
+        recentLabel.style.letterSpacing = ".05em";
+        recentLabel.style.textTransform = "uppercase";
+        recentLabel.style.color = "#9a9aa6";
+        topCard.appendChild(recentLabel);
 
         var recent = entries.slice(0, 5);
-        var syncColor = syncState === "synced" ? "#34d399" : syncState === "syncing" ? "#38bdf8" : "#fbbf24";
-        var syncText = syncState === "synced" ? "Planilha OK" + (lastSyncTime ? " · " + lastSyncTime : "") : syncState === "syncing" ? "Sincronizando..." : "Cache Local";
+        for (var rIdx = 0; rIdx < recent.length; rIdx++) {
+          var it = recent[rIdx];
+          var row = el("div", "row-between tabular");
+          row.style.padding = "7px 0";
+          row.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
+          row.style.fontSize = "12px";
 
-        var recentHtml = recent.map(function (it) {
-          var badge = it.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>'
-            : it.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>'
-            : it.valor < 0 ? '<span class="badge-refund">Estorno</span>' : "";
-          return (
-            '<div class="row-between tabular" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">' +
-              '<div style="min-width:0;display:flex;align-items:center;gap:8px;">' +
-                '<span class="dot" style="background:#34d399;"></span>' +
-                '<div class="truncate">' +
-                  '<span style="font-weight:600;">' + esc(it.estabelecimento) + "</span>" + badge +
-                  '<div style="font-size:10px;color:#71717a;">' + esc(it.data) + " · " + esc(it.categoria) + " · " + esc(it.meioPagamento || "Crédito") + "</div>" +
-                "</div>" +
-              "</div>" +
-              '<span style="font-weight:700;color:' + (it.valor < 0 ? "#6ee7b7" : "#f4f4f6") + ';flex-shrink:0;">' + formatBRL(it.valor) + "</span>" +
-            "</div>"
-          );
-        }).join("");
+          var left = el("div", "");
+          left.style.minWidth = "0";
+          left.style.display = "flex";
+          left.style.alignItems = "center";
+          left.style.gap = "8px";
 
-        var catsHtml = cats.map(function (c) {
+          var rDot = el("span", "dot");
+          rDot.style.background = "#34d399";
+
+          var textBox = el("div", "truncate");
+          var nameSpan = el("span", "", it.estabelecimento);
+          nameSpan.style.fontWeight = "600";
+          textBox.appendChild(nameSpan);
+
+          var bdg = createBadge(it.subtipo, it.valor);
+          if (bdg) textBox.appendChild(bdg);
+
+          var metaDiv = el("div", "", it.data + " · " + it.categoria + " · " + (it.meioPagamento || "Crédito"));
+          metaDiv.style.fontSize = "10px";
+          metaDiv.style.color = "#71717a";
+          textBox.appendChild(metaDiv);
+
+          left.appendChild(rDot);
+          left.appendChild(textBox);
+
+          var valSpan = el("span", "", formatBRL(it.valor));
+          valSpan.style.fontWeight = "700";
+          valSpan.style.color = it.valor < 0 ? "#6ee7b7" : "#f4f4f6";
+          valSpan.style.flexShrink = "0";
+
+          row.appendChild(left);
+          row.appendChild(valSpan);
+          topCard.appendChild(row);
+        }
+
+        root.appendChild(topCard);
+
+        var mainCard = el("div", "card");
+        var consTitle = el("div", "", "Total Consolidado");
+        consTitle.style.fontSize = "11px";
+        consTitle.style.fontWeight = "800";
+        consTitle.style.letterSpacing = ".06em";
+        consTitle.style.textTransform = "uppercase";
+        consTitle.style.color = "#34d399";
+
+        var totalDiv = el("div", "tabular", formatBRL(grandTotal));
+        totalDiv.style.marginTop = "2px";
+        totalDiv.style.fontSize = "28px";
+        totalDiv.style.fontWeight = "800";
+        totalDiv.style.letterSpacing = "-0.02em";
+
+        var subDiv = el("div", "tabular", entries.length + " lançamentos · Crédito: " + formatBRL(creditTotal) + " · Débito: " + formatBRL(debitTotal));
+        subDiv.style.fontSize = "12px";
+        subDiv.style.color = "#9a9aa6";
+
+        mainCard.appendChild(consTitle);
+        mainCard.appendChild(totalDiv);
+        mainCard.appendChild(subDiv);
+
+        var grid2 = el("div", "grid-2");
+        grid2.style.marginTop = "12px";
+
+        var workBox = el("div", "surface tabular");
+        workBox.style.padding = "11px";
+        var workLbl = el("div", "", "Transporte — Trabalho");
+        workLbl.style.fontSize = "11px";
+        workLbl.style.color = "#9a9aa6";
+        var workVal = el("div", "", formatBRL(workTotal));
+        workVal.style.marginTop = "2px";
+        workVal.style.fontSize = "16px";
+        workVal.style.fontWeight = "700";
+        workVal.style.color = "#38bdf8";
+        workBox.appendChild(workLbl);
+        workBox.appendChild(workVal);
+
+        var leisureBox = el("div", "surface tabular");
+        leisureBox.style.padding = "11px";
+        var leisureLbl = el("div", "", "Transporte — Lazer");
+        leisureLbl.style.fontSize = "11px";
+        leisureLbl.style.color = "#9a9aa6";
+        var leisureVal = el("div", "", formatBRL(leisureTotal));
+        leisureVal.style.marginTop = "2px";
+        leisureVal.style.fontSize = "16px";
+        leisureVal.style.fontWeight = "700";
+        leisureVal.style.color = "#f43f5e";
+        leisureBox.appendChild(leisureLbl);
+        leisureBox.appendChild(leisureVal);
+
+        grid2.appendChild(workBox);
+        grid2.appendChild(leisureBox);
+        mainCard.appendChild(grid2);
+
+        var donutWrap = el("div", "donut-wrap");
+        donutWrap.appendChild(buildDonutSVG(cats, grandTotal));
+
+        var donutCenter = el("div", "donut-center tabular");
+        var dcTop = el("div", "", activeCat ? activeCat.name.split(" / ")[0] : "Fatura Líquida");
+        dcTop.style.fontSize = "11px";
+        dcTop.style.textTransform = "uppercase";
+        dcTop.style.color = "#9a9aa6";
+
+        var dcMid = el("div", "", formatBRL(activeCat ? activeCat.total : grandTotal));
+        dcMid.style.marginTop = "2px";
+        dcMid.style.fontSize = "17px";
+        dcMid.style.fontWeight = "800";
+
+        var dcBot = el("div", "", activeCat
+          ? ((activeCat.total / (grandTotal || 1)) * 100).toFixed(1) + "% · " + activeCat.count + " itens"
+          : entries.length + " itens");
+        dcBot.style.marginTop = "2px";
+        dcBot.style.fontSize = "11px";
+        dcBot.style.fontWeight = "600";
+        dcBot.style.color = "#34d399";
+
+        donutCenter.appendChild(dcTop);
+        donutCenter.appendChild(dcMid);
+        donutCenter.appendChild(dcBot);
+        donutWrap.appendChild(donutCenter);
+        mainCard.appendChild(donutWrap);
+
+        var catList = el("div", "");
+        catList.style.display = "flex";
+        catList.style.flexDirection = "column";
+        catList.style.gap = "9px";
+
+        for (var cIdx = 0; cIdx < cats.length; cIdx++) {
+          var c = cats[cIdx];
           var share = grandTotal > 0 ? ((c.total / grandTotal) * 100).toFixed(1) : "0.0";
           var ratio = c.cap > 0 ? Math.min(100, Math.max(0, (c.total / c.cap) * 100)).toFixed(1) : "100.0";
           var bal = roundCents(c.cap - c.total);
           var balTxt = bal >= 0 ? "Saldo: " + formatBRL(bal) : "Acima: " + formatBRL(Math.abs(bal));
           var exp = selectedCategory === c.name;
-          var itemsHtml = exp
-            ? '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">' +
-                c.items.map(function (e) {
-                  var b = e.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>' : e.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>' : "";
-                  return (
-                    '<div class="row-between tabular" style="font-size:12px;color:#9a9aa6;">' +
-                      '<span class="truncate">' + esc(e.data) + ' · <strong style="color:#f4f4f6;">' + esc(e.estabelecimento) + "</strong>" + b + "</span>" +
-                      '<span style="font-weight:600;color:' + (e.valor < 0 ? "#6ee7b7" : "#e4e4e7") + ';flex-shrink:0;">' + formatBRL(e.valor) + "</span>" +
-                    "</div>"
-                  );
-                }).join("") +
-              "</div>"
-            : "";
 
-          return (
-            '<div class="surface cat-card ' + (exp ? "expanded" : "") + '" data-cat="' + encodeURIComponent(c.name) + '">' +
-              '<div class="row-between tabular" style="font-size:13px;font-weight:600;">' +
-                '<span style="display:flex;align-items:center;gap:8px;min-width:0;">' +
-                  '<span class="dot" style="width:10px;height:10px;background:' + c.color + ';"></span>' +
-                  '<span class="truncate">' + esc(c.name) + "</span>" +
-                "</span>" +
-                '<span style="flex-shrink:0;">' + formatBRL(c.total) + " (" + share + "%)</span>" +
-              "</div>" +
-              '<div class="bar-track"><div class="bar-fill" style="width:' + ratio + "%;background:" + c.color + ';"></div></div>' +
-              '<div class="row-between tabular" style="margin-top:6px;font-size:11px;color:#9a9aa6;">' +
-                '<span class="truncate">' + c.count + " itens · Teto " + formatBRL(c.cap) + " (" + balTxt + ")</span>" +
-                '<span style="flex-shrink:0;">' + (exp ? "Ocultar ▲" : "Itens ▼") + "</span>" +
-              "</div>" +
-              itemsHtml +
-            "</div>"
-          );
-        }).join("");
+          var catCard = el("div", "surface cat-card" + (exp ? " expanded" : ""));
+          (function (catName) {
+            catCard.addEventListener("click", function () {
+              selectedCategory = selectedCategory === catName ? null : catName;
+              renderApp();
+            });
+          })(c.name);
 
-        root.innerHTML =
-          '<div class="card">' +
-            '<div class="row-between">' +
-              '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Fatura Radar — Nov 2026</span>' +
-              '<div style="display:flex;align-items:center;gap:6px;">' +
-                '<span class="pill"><span class="dot" style="background:' + syncColor + ';"></span><span>' + syncText + "</span></span>" +
-                '<button type="button" class="btn-ghost" data-action="refresh">' + (isPulling ? "..." : "Atualizar ↻") + "</button>" +
-              "</div>" +
-            "</div>" +
-            '<div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9a9aa6;">Últimos Lançamentos</div>' +
-            recentHtml +
-          "</div>" +
+          var cHead = el("div", "row-between tabular");
+          cHead.style.fontSize = "13px";
+          cHead.style.fontWeight = "600";
 
-          '<div class="card">' +
-            '<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Total Consolidado</div>' +
-            '<div class="tabular" style="margin-top:2px;font-size:28px;font-weight:800;letter-spacing:-0.02em;">' + formatBRL(grandTotal) + "</div>" +
-            '<div class="tabular" style="font-size:12px;color:#9a9aa6;">' + entries.length + " lançamentos · Crédito: " + formatBRL(creditTotal) + " · Débito: " + formatBRL(debitTotal) + "</div>" +
+          var cLeft = el("span", "");
+          cLeft.style.display = "flex";
+          cLeft.style.alignItems = "center";
+          cLeft.style.gap = "8px";
+          cLeft.style.minWidth = "0";
 
-            '<div class="grid-2" style="margin-top:12px;">' +
-              '<div class="surface tabular" style="padding:11px;">' +
-                '<div style="font-size:11px;color:#9a9aa6;">Transporte — Trabalho</div>' +
-                '<div style="margin-top:2px;font-size:16px;font-weight:700;color:#38bdf8;">' + formatBRL(workTotal) + "</div>" +
-              "</div>" +
-              '<div class="surface tabular" style="padding:11px;">' +
-                '<div style="font-size:11px;color:#9a9aa6;">Transporte — Lazer</div>' +
-                '<div style="margin-top:2px;font-size:16px;font-weight:700;color:#f43f5e;">' + formatBRL(leisureTotal) + "</div>" +
-              "</div>" +
-            "</div>" +
+          var cDot = el("span", "dot");
+          cDot.style.width = "10px";
+          cDot.style.height = "10px";
+          cDot.style.background = c.color;
 
-            '<div class="donut-wrap">' +
-              buildDonutSVG(cats, grandTotal) +
-              '<div class="donut-center tabular">' +
-                '<div style="font-size:11px;text-transform:uppercase;color:#9a9aa6;">' + esc(activeCat ? activeCat.name.split(" / ")[0] : "Fatura Líquida") + "</div>" +
-                '<div style="margin-top:2px;font-size:17px;font-weight:800;">' + formatBRL(activeCat ? activeCat.total : grandTotal) + "</div>" +
-                '<div style="margin-top:2px;font-size:11px;font-weight:600;color:#34d399;">' + (activeCat ? ((activeCat.total / (grandTotal || 1)) * 100).toFixed(1) + "% · " + activeCat.count + " itens" : entries.length + " itens") + "</div>" +
-              "</div>" +
-            "</div>" +
+          var cName = el("span", "truncate", c.name);
+          cLeft.appendChild(cDot);
+          cLeft.appendChild(cName);
 
-            '<div style="display:flex;flex-direction:column;gap:9px;">' + catsHtml + "</div>" +
-          "</div>";
+          var cRight = el("span", "", formatBRL(c.total) + " (" + share + "%)");
+          cRight.style.flexShrink = "0";
+
+          cHead.appendChild(cLeft);
+          cHead.appendChild(cRight);
+          catCard.appendChild(cHead);
+
+          var track = el("div", "bar-track");
+          var fill = el("div", "bar-fill");
+          fill.style.width = ratio + "%";
+          fill.style.background = c.color;
+          track.appendChild(fill);
+          catCard.appendChild(track);
+
+          var cFoot = el("div", "row-between tabular");
+          cFoot.style.marginTop = "6px";
+          cFoot.style.fontSize = "11px";
+          cFoot.style.color = "#9a9aa6";
+
+          var cMeta = el("span", "truncate", c.count + " itens · Teto " + formatBRL(c.cap) + " (" + balTxt + ")");
+          var cToggle = el("span", "", exp ? "Ocultar ▲" : "Itens ▼");
+          cToggle.style.flexShrink = "0";
+          cFoot.appendChild(cMeta);
+          cFoot.appendChild(cToggle);
+          catCard.appendChild(cFoot);
+
+          if (exp) {
+            var itemsBox = el("div", "");
+            itemsBox.style.marginTop = "10px";
+            itemsBox.style.paddingTop = "10px";
+            itemsBox.style.borderTop = "1px solid rgba(255,255,255,0.08)";
+            itemsBox.style.display = "flex";
+            itemsBox.style.flexDirection = "column";
+            itemsBox.style.gap = "6px";
+
+            for (var eIdx = 0; eIdx < c.items.length; eIdx++) {
+              var e = c.items[eIdx];
+              var eRow = el("div", "row-between tabular");
+              eRow.style.fontSize = "12px";
+              eRow.style.color = "#9a9aa6";
+
+              var eLeft = el("span", "truncate");
+              eLeft.appendChild(document.createTextNode(e.data + " · "));
+              var eStrong = el("strong", "", e.estabelecimento);
+              eStrong.style.color = "#f4f4f6";
+              eLeft.appendChild(eStrong);
+
+              var eBdg = createBadge(e.subtipo, e.valor);
+              if (eBdg) eLeft.appendChild(eBdg);
+
+              var eVal = el("span", "", formatBRL(e.valor));
+              eVal.style.fontWeight = "600";
+              eVal.style.color = e.valor < 0 ? "#6ee7b7" : "#e4e4e7";
+              eVal.style.flexShrink = "0";
+
+              eRow.appendChild(eLeft);
+              eRow.appendChild(eVal);
+              itemsBox.appendChild(eRow);
+            }
+
+            catCard.appendChild(itemsBox);
+          }
+
+          catList.appendChild(catCard);
+        }
+
+        mainCard.appendChild(catList);
+        root.appendChild(mainCard);
       }
-
-      document.getElementById("app").addEventListener("click", function (e) {
-        var actionEl = e.target.closest("[data-action]");
-        if (actionEl && actionEl.getAttribute("data-action") === "refresh") {
-          syncPull(false);
-          return;
-        }
-        var catEl = e.target.closest("[data-cat]");
-        if (catEl) {
-          var name = decodeURIComponent(catEl.getAttribute("data-cat"));
-          selectedCategory = selectedCategory === name ? null : name;
-          renderApp();
-        }
-      });
 
       renderApp();
       syncPull(false);
