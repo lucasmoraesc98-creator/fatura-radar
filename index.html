@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#09090b" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Fatura Radar — Controle Mensal Nov 2026</title>
   <style>
@@ -19,10 +19,8 @@
       --muted: #9a9aa6;
       --muted-2: #71717a;
       --accent: #10b981;
-      --accent-light: #6ee7b7;
       --sky: #38bdf8;
       --rose: #f43f5e;
-      --amber: #fbbf24;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
@@ -184,7 +182,7 @@
       "use strict";
 
       const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCSi9U6OzTIlQrgIsz4VnHtknyAwBKWJt7xH1NwY7BRICud2_VGXoVCeFfNNq1-rQn/exec";
-      const STORAGE_KEY = "fatura_radar_entries_v9";
+      const STORAGE_KEY = "fatura_radar_entries_v10";
       const SYNC_TIMEOUT_MS = 6000;
       const AUTO_SYNC_INTERVAL_MS = 20000;
 
@@ -300,69 +298,81 @@
       function parseMoney(v) {
         if (typeof v === "number") return Math.round(v * 100) / 100;
         if (!v) return 0;
-        let s = String(v).replace(/R\$|\s+/g, "").trim();
-        if (s.includes(",") && s.includes(".")) {
-          s = s.replace(/\./g, "").replace(",", ".");
-        } else if (s.includes(",")) {
-          s = s.replace(",", ".");
+        var s = String(v).split("R$").join("").trim();
+        var parts = s.split(" ");
+        s = parts.join("");
+        if (s.indexOf(",") !== -1 && s.indexOf(".") !== -1) {
+          s = s.split(".").join("").split(",").join(".");
+        } else if (s.indexOf(",") !== -1) {
+          s = s.split(",").join(".");
         }
-        const n = parseFloat(s);
+        var n = parseFloat(s);
         return isNaN(n) ? 0 : Math.round(n * 100) / 100;
       }
 
-      const roundCents = n => Math.round((Number(n) || 0) * 100) / 100;
-      const toCents = n => Math.round(roundCents(n) * 100);
-      const pad2 = n => String(n).padStart(2, "0");
+      function roundCents(n) {
+        return Math.round((Number(n) || 0) * 100) / 100;
+      }
+
+      function toCents(n) {
+        return Math.round(roundCents(n) * 100);
+      }
+
+      function pad2(n) {
+        return String(n).padStart(2, "0");
+      }
 
       function formatBRL(v) {
         return (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       }
 
       function todayBR() {
-        const d = new Date();
+        var d = new Date();
         return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + "/" + d.getFullYear();
       }
 
       function nowTimeBR() {
-        const d = new Date();
+        var d = new Date();
         return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
       }
 
       function formatDateBR(raw) {
         if (!raw) return todayBR();
-        const s = String(raw).trim();
-        const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        var s = String(raw).trim();
+        var dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
         if (dmy) return pad2(dmy[1]) + "/" + pad2(dmy[2]) + "/" + dmy[3];
-        const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (iso) return iso[3] + "/" + iso[2] + "/" + iso[1];
-        const p = new Date(s);
+        var p = new Date(s);
         return isNaN(p.getTime()) ? s : pad2(p.getDate()) + "/" + pad2(p.getMonth() + 1) + "/" + p.getFullYear();
       }
 
       function sortDateDesc(a, b) {
-        const pa = String(a.data || "").split("/");
-        const pb = String(b.data || "").split("/");
-        const da = pa.length === 3 ? Number(pa[2] + pa[1] + pa[0]) : 0;
-        const db = pb.length === 3 ? Number(pb[2] + pb[1] + pb[0]) : 0;
+        var pa = String(a.data || "").split("/");
+        var pb = String(b.data || "").split("/");
+        var da = pa.length === 3 ? Number(pa[2] + pa[1] + pa[0]) : 0;
+        var db = pb.length === 3 ? Number(pb[2] + pb[1] + pb[0]) : 0;
         if (db !== da) return db - da;
         return (Number(b.id) || 0) - (Number(a.id) || 0);
       }
 
-      const FALLBACK_RECORDS = FALLBACK_ITEMS.map(r => ({
-        id: r[0],
-        data: formatDateBR(r[1]),
-        estabelecimento: r[2],
-        valor: roundCents(r[3]),
-        categoria: r[4],
-        subtipo: r[5] || "",
-        meioPagamento: r[6] || "Crédito",
-        origem: r[7] || "Base"
-      }));
+      var FALLBACK_RECORDS = FALLBACK_ITEMS.map(function (r) {
+        return {
+          id: r[0],
+          data: formatDateBR(r[1]),
+          estabelecimento: r[2],
+          valor: roundCents(r[3]),
+          categoria: r[4],
+          subtipo: r[5] || "",
+          meioPagamento: r[6] || "Crédito",
+          origem: r[7] || "Base"
+        };
+      });
 
       function readCache() {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          const parsed = raw ? JSON.parse(raw) : null;
+          var raw = localStorage.getItem(STORAGE_KEY);
+          var parsed = raw ? JSON.parse(raw) : null;
           return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
         } catch (_) {
           return null;
@@ -373,36 +383,38 @@
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (_) {}
       }
 
-      let remoteEntries = readCache();
-      let selectedCategory = null;
-      let syncState = "syncing";
-      let isPulling = false;
-      let lastSyncTime = "";
+      var remoteEntries = readCache();
+      var selectedCategory = null;
+      var syncState = "syncing";
+      var isPulling = false;
+      var lastSyncTime = "";
 
       function getAllEntries() {
-        const source = Array.isArray(remoteEntries) && remoteEntries.length > 0
+        var source = Array.isArray(remoteEntries) && remoteEntries.length > 0
           ? remoteEntries
           : FALLBACK_RECORDS;
 
         return source
-          .filter(it => {
+          .filter(function (it) {
             if (!it) return false;
-            const desc = String(it.estabelecimento || "").trim().toLowerCase();
+            var desc = String(it.estabelecimento || "").trim().toLowerCase();
             if (!desc || desc === "total geral" || desc === "estabelecimento") return false;
             return toCents(it.valor) !== 0;
           })
-          .map(it => Object.assign({}, it, {
-            data: formatDateBR(it.data),
-            valor: roundCents(it.valor)
-          }))
+          .map(function (it) {
+            return Object.assign({}, it, {
+              data: formatDateBR(it.data),
+              valor: roundCents(it.valor)
+            });
+          })
           .sort(sortDateDesc);
       }
 
       function groupCategories(entries) {
-        const map = {};
-        for (let i = 0; i < entries.length; i++) {
-          const it = entries[i];
-          const cat = it.categoria || "Compras / Presentes";
+        var map = {};
+        for (var i = 0; i < entries.length; i++) {
+          var it = entries[i];
+          var cat = it.categoria || "Compras / Presentes";
           if (!map[cat]) {
             map[cat] = {
               name: cat,
@@ -417,12 +429,12 @@
           map[cat].count += 1;
           map[cat].items.push(it);
         }
-        return Object.values(map).sort((a, b) => b.total - a.total);
+        return Object.values(map).sort(function (a, b) { return b.total - a.total; });
       }
 
       async function fetchTimeout(url, opts) {
-        const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = ctrl ? setTimeout(() => ctrl.abort(), SYNC_TIMEOUT_MS) : null;
+        var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, SYNC_TIMEOUT_MS) : null;
         try {
           return await fetch(url, Object.assign({}, opts || {}, ctrl ? { signal: ctrl.signal } : {}));
         } finally {
@@ -439,24 +451,24 @@
         }
 
         try {
-          const sep = APPS_SCRIPT_URL.includes("?") ? "&" : "?";
-          const res = await fetchTimeout(APPS_SCRIPT_URL + sep + "t=" + Date.now(), {
+          var sep = APPS_SCRIPT_URL.indexOf("?") !== -1 ? "&" : "?";
+          var res = await fetchTimeout(APPS_SCRIPT_URL + sep + "t=" + Date.now(), {
             method: "GET",
             redirect: "follow"
           });
           if (!res || !res.ok) throw new Error("HTTP");
-          const data = await res.json();
-          const rawList = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : null);
+          var data = await res.json();
+          var rawList = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : null);
 
           if (rawList && rawList.length > 0) {
-            const parsed = rawList.map((r, idx) => {
-              const desc = String(r.desc || r.estabelecimento || r.Estabelecimento || "").trim();
-              const sub = String(r.subtipo || r["Subtipo / Tag"] || r.tag || "").trim();
-              const rawVal = r.val !== undefined ? r.val : (r.valor !== undefined ? r.valor : r["Valor (R$)"]);
-              const rawPay = String(r.meioPagamento || r.pagamento || "").trim();
-              const isDebit = rawPay.toLowerCase() === "débito"
-                || desc.toLowerCase().includes("débito")
-                || sub.toLowerCase().includes("débito");
+            var parsed = rawList.map(function (r, idx) {
+              var desc = String(r.desc || r.estabelecimento || r.Estabelecimento || "").trim();
+              var sub = String(r.subtipo || r["Subtipo / Tag"] || r.tag || "").trim();
+              var rawVal = r.val !== undefined ? r.val : (r.valor !== undefined ? r.valor : r["Valor (R$)"]);
+              var rawPay = String(r.meioPagamento || r.pagamento || "").trim();
+              var isDebit = rawPay.toLowerCase() === "débito"
+                || desc.toLowerCase().indexOf("débito") !== -1
+                || sub.toLowerCase().indexOf("débito") !== -1;
 
               return {
                 id: String(r.id || r.ID || (idx + 1)),
@@ -468,7 +480,9 @@
                 meioPagamento: isDebit ? "Débito" : "Crédito",
                 origem: String(r.origem || r.Origem || "Planilha").trim()
               };
-            }).filter(it => it.estabelecimento && it.estabelecimento.toLowerCase() !== "total geral" && toCents(it.valor) !== 0);
+            }).filter(function (it) {
+              return it.estabelecimento && it.estabelecimento.toLowerCase() !== "total geral" && toCents(it.valor) !== 0;
+            });
 
             if (parsed.length > 0) {
               remoteEntries = parsed;
@@ -490,151 +504,156 @@
       }
 
       function buildDonutSVG(categories, total) {
-        const r = 74, cx = 105, cy = 105, circ = 2 * Math.PI * r;
-        let offset = 0;
-        const segs = categories.map(cat => {
-          const val = Math.max(0, cat.total);
-          const frac = total > 0 ? val / total : 0;
-          const dash = frac * circ;
-          const gap = Math.max(0, circ - dash);
-          const active = selectedCategory === cat.name;
-          const opacity = selectedCategory && !active ? 0.35 : 1;
-          const circle = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cat.color}" stroke-width="${active ? 24 : 20}" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})" opacity="${opacity}" style="cursor:pointer" data-cat="${encodeURIComponent(cat.name)}" />`;
+        var r = 74, cx = 105, cy = 105, circ = 2 * Math.PI * r;
+        var offset = 0;
+        var segs = categories.map(function (cat) {
+          var val = Math.max(0, cat.total);
+          var frac = total > 0 ? val / total : 0;
+          var dash = frac * circ;
+          var gap = Math.max(0, circ - dash);
+          var active = selectedCategory === cat.name;
+          var opacity = selectedCategory && !active ? 0.35 : 1;
+          var circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + cat.color + '" stroke-width="' + (active ? 24 : 20) + '" stroke-dasharray="' + dash.toFixed(2) + ' ' + gap.toFixed(2) + '" stroke-dashoffset="' + (-offset).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" opacity="' + opacity + '" style="cursor:pointer" data-cat="' + encodeURIComponent(cat.name) + '" />';
           offset += dash;
           return circle;
         }).join("");
-        return `<svg width="210" height="210" viewBox="0 0 210 210">${segs}</svg>`;
+        return '<svg width="210" height="210" viewBox="0 0 210 210">' + segs + "</svg>";
       }
 
       function esc(s) {
         return String(s || "")
-          .replace(/&/g, "&")
-          .replace(/</g, "<")
-          .replace(/>/g, ">")
-          .replace(/"/g, """);
+          .split("&").join("&")
+          .split("<").join("<")
+          .split(">").join(">")
+          .split('"').join(""");
       }
 
       function renderApp() {
-        const root = document.getElementById("app");
+        var root = document.getElementById("app");
         if (!root) return;
 
-        const entries = getAllEntries();
-        const grandTotal = roundCents(entries.reduce((s, x) => s + x.valor, 0));
-        const debitTotal = roundCents(entries.filter(x => String(x.meioPagamento).toLowerCase() === "débito").reduce((s, x) => s + x.valor, 0));
-        const creditTotal = roundCents(grandTotal - debitTotal);
+        var entries = getAllEntries();
+        var grandTotal = roundCents(entries.reduce(function (s, x) { return s + x.valor; }, 0));
+        var debitTotal = roundCents(entries.filter(function (x) { return String(x.meioPagamento).toLowerCase() === "débito"; }).reduce(function (s, x) { return s + x.valor; }, 0));
+        var creditTotal = roundCents(grandTotal - debitTotal);
 
-        const cats = groupCategories(entries);
-        const activeCat = cats.find(c => c.name === selectedCategory);
-        const workTotal = roundCents(entries.filter(x => x.categoria === "Transporte" && x.subtipo === "Trabalho").reduce((s, x) => s + x.valor, 0));
-        const leisureTotal = roundCents(entries.filter(x => x.categoria === "Transporte" && x.subtipo === "Lazer").reduce((s, x) => s + x.valor, 0));
+        var cats = groupCategories(entries);
+        var activeCat = cats.find(function (c) { return c.name === selectedCategory; });
+        var workTotal = roundCents(entries.filter(function (x) { return x.categoria === "Transporte" && x.subtipo === "Trabalho"; }).reduce(function (s, x) { return s + x.valor; }, 0));
+        var leisureTotal = roundCents(entries.filter(function (x) { return x.categoria === "Transporte" && x.subtipo === "Lazer"; }).reduce(function (s, x) { return s + x.valor; }, 0));
 
-        const recent = entries.slice(0, 5);
-        const syncColor = syncState === "synced" ? "#34d399" : syncState === "syncing" ? "#38bdf8" : "#fbbf24";
-        const syncText = syncState === "synced" ? "Planilha OK" + (lastSyncTime ? " · " + lastSyncTime : "") : syncState === "syncing" ? "Sincronizando..." : "Cache Local";
+        var recent = entries.slice(0, 5);
+        var syncColor = syncState === "synced" ? "#34d399" : syncState === "syncing" ? "#38bdf8" : "#fbbf24";
+        var syncText = syncState === "synced" ? "Planilha OK" + (lastSyncTime ? " · " + lastSyncTime : "") : syncState === "syncing" ? "Sincronizando..." : "Cache Local";
 
-        const recentHtml = recent.map(it => {
-          const badge = it.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>'
+        var recentHtml = recent.map(function (it) {
+          var badge = it.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>'
             : it.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>'
             : it.valor < 0 ? '<span class="badge-refund">Estorno</span>' : "";
-          return `
-            <div class="row-between tabular" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">
-              <div style="min-width:0;display:flex;align-items:center;gap:8px;">
-                <span class="dot" style="background:#34d399;"></span>
-                <div class="truncate">
-                  <span style="font-weight:600;">${esc(it.estabelecimento)}</span>${badge}
-                  <div style="font-size:10px;color:#71717a;">${esc(it.data)} · ${esc(it.categoria)} · ${esc(it.meioPagamento || "Crédito")}</div>
-                </div>
-              </div>
-              <span style="font-weight:700;color:${it.valor < 0 ? "#6ee7b7" : "#f4f4f6"};flex-shrink:0;">${formatBRL(it.valor)}</span>
-            </div>`;
+          return (
+            '<div class="row-between tabular" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">' +
+              '<div style="min-width:0;display:flex;align-items:center;gap:8px;">' +
+                '<span class="dot" style="background:#34d399;"></span>' +
+                '<div class="truncate">' +
+                  '<span style="font-weight:600;">' + esc(it.estabelecimento) + "</span>" + badge +
+                  '<div style="font-size:10px;color:#71717a;">' + esc(it.data) + " · " + esc(it.categoria) + " · " + esc(it.meioPagamento || "Crédito") + "</div>" +
+                "</div>" +
+              "</div>" +
+              '<span style="font-weight:700;color:' + (it.valor < 0 ? "#6ee7b7" : "#f4f4f6") + ';flex-shrink:0;">' + formatBRL(it.valor) + "</span>" +
+            "</div>"
+          );
         }).join("");
 
-        const catsHtml = cats.map(c => {
-          const share = grandTotal > 0 ? ((c.total / grandTotal) * 100).toFixed(1) : "0.0";
-          const ratio = c.cap > 0 ? Math.min(100, Math.max(0, (c.total / c.cap) * 100)).toFixed(1) : "100.0";
-          const bal = roundCents(c.cap - c.total);
-          const balTxt = bal >= 0 ? "Saldo: " + formatBRL(bal) : "Acima: " + formatBRL(Math.abs(bal));
-          const exp = selectedCategory === c.name;
-          const itemsHtml = exp ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">
-            ${c.items.map(e => {
-              const b = e.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>' : e.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>' : "";
-              return `<div class="row-between tabular" style="font-size:12px;color:#9a9aa6;">
-                <span class="truncate">${esc(e.data)} · <strong style="color:#f4f4f6;">${esc(e.estabelecimento)}</strong>${b}</span>
-                <span style="font-weight:600;color:${e.valor < 0 ? "#6ee7b7" : "#e4e4e7"};flex-shrink:0;">${formatBRL(e.valor)}</span>
-              </div>`;
-            }).join("")}
-          </div>` : "";
+        var catsHtml = cats.map(function (c) {
+          var share = grandTotal > 0 ? ((c.total / grandTotal) * 100).toFixed(1) : "0.0";
+          var ratio = c.cap > 0 ? Math.min(100, Math.max(0, (c.total / c.cap) * 100)).toFixed(1) : "100.0";
+          var bal = roundCents(c.cap - c.total);
+          var balTxt = bal >= 0 ? "Saldo: " + formatBRL(bal) : "Acima: " + formatBRL(Math.abs(bal));
+          var exp = selectedCategory === c.name;
+          var itemsHtml = exp
+            ? '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">' +
+                c.items.map(function (e) {
+                  var b = e.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>' : e.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>' : "";
+                  return (
+                    '<div class="row-between tabular" style="font-size:12px;color:#9a9aa6;">' +
+                      '<span class="truncate">' + esc(e.data) + ' · <strong style="color:#f4f4f6;">' + esc(e.estabelecimento) + "</strong>" + b + "</span>" +
+                      '<span style="font-weight:600;color:' + (e.valor < 0 ? "#6ee7b7" : "#e4e4e7") + ';flex-shrink:0;">' + formatBRL(e.valor) + "</span>" +
+                    "</div>"
+                  );
+                }).join("") +
+              "</div>"
+            : "";
 
-          return `
-            <div class="surface cat-card ${exp ? "expanded" : ""}" data-cat="${encodeURIComponent(c.name)}">
-              <div class="row-between tabular" style="font-size:13px;font-weight:600;">
-                <span style="display:flex;align-items:center;gap:8px;min-width:0;">
-                  <span class="dot" style="width:10px;height:10px;background:${c.color};"></span>
-                  <span class="truncate">${esc(c.name)}</span>
-                </span>
-                <span style="flex-shrink:0;">${formatBRL(c.total)} (${share}%)</span>
-              </div>
-              <div class="bar-track"><div class="bar-fill" style="width:${ratio}%;background:${c.color};"></div></div>
-              <div class="row-between tabular" style="margin-top:6px;font-size:11px;color:#9a9aa6;">
-                <span class="truncate">${c.count} itens · Teto ${formatBRL(c.cap)} (${balTxt})</span>
-                <span style="flex-shrink:0;">${exp ? "Ocultar ▲" : "Itens ▼"}</span>
-              </div>
-              ${itemsHtml}
-            </div>`;
+          return (
+            '<div class="surface cat-card ' + (exp ? "expanded" : "") + '" data-cat="' + encodeURIComponent(c.name) + '">' +
+              '<div class="row-between tabular" style="font-size:13px;font-weight:600;">' +
+                '<span style="display:flex;align-items:center;gap:8px;min-width:0;">' +
+                  '<span class="dot" style="width:10px;height:10px;background:' + c.color + ';"></span>' +
+                  '<span class="truncate">' + esc(c.name) + "</span>" +
+                "</span>" +
+                '<span style="flex-shrink:0;">' + formatBRL(c.total) + " (" + share + "%)</span>" +
+              "</div>" +
+              '<div class="bar-track"><div class="bar-fill" style="width:' + ratio + "%;background:" + c.color + ';"></div></div>' +
+              '<div class="row-between tabular" style="margin-top:6px;font-size:11px;color:#9a9aa6;">' +
+                '<span class="truncate">' + c.count + " itens · Teto " + formatBRL(c.cap) + " (" + balTxt + ")</span>" +
+                '<span style="flex-shrink:0;">' + (exp ? "Ocultar ▲" : "Itens ▼") + "</span>" +
+              "</div>" +
+              itemsHtml +
+            "</div>"
+          );
         }).join("");
 
-        root.innerHTML = `
-          <div class="card">
-            <div class="row-between">
-              <span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Fatura Radar — Nov 2026</span>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span class="pill"><span class="dot" style="background:${syncColor};"></span><span>${syncText}</span></span>
-                <button type="button" class="btn-ghost" data-action="refresh">${isPulling ? "..." : "Atualizar ↻"}</button>
-              </div>
-            </div>
-            <div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9a9aa6;">Últimos Lançamentos</div>
-            ${recentHtml}
-          </div>
+        root.innerHTML =
+          '<div class="card">' +
+            '<div class="row-between">' +
+              '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Fatura Radar — Nov 2026</span>' +
+              '<div style="display:flex;align-items:center;gap:6px;">' +
+                '<span class="pill"><span class="dot" style="background:' + syncColor + ';"></span><span>' + syncText + "</span></span>" +
+                '<button type="button" class="btn-ghost" data-action="refresh">' + (isPulling ? "..." : "Atualizar ↻") + "</button>" +
+              "</div>" +
+            "</div>" +
+            '<div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9a9aa6;">Últimos Lançamentos</div>' +
+            recentHtml +
+          "</div>" +
 
-          <div class="card">
-            <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Total Consolidado</div>
-            <div class="tabular" style="margin-top:2px;font-size:28px;font-weight:800;letter-spacing:-0.02em;">${formatBRL(grandTotal)}</div>
-            <div class="tabular" style="font-size:12px;color:#9a9aa6;">${entries.length} lançamentos · Crédito: ${formatBRL(creditTotal)} · Débito: ${formatBRL(debitTotal)}</div>
+          '<div class="card">' +
+            '<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Total Consolidado</div>' +
+            '<div class="tabular" style="margin-top:2px;font-size:28px;font-weight:800;letter-spacing:-0.02em;">' + formatBRL(grandTotal) + "</div>" +
+            '<div class="tabular" style="font-size:12px;color:#9a9aa6;">' + entries.length + " lançamentos · Crédito: " + formatBRL(creditTotal) + " · Débito: " + formatBRL(debitTotal) + "</div>" +
 
-            <div class="grid-2" style="margin-top:12px;">
-              <div class="surface tabular" style="padding:11px;">
-                <div style="font-size:11px;color:#9a9aa6;">Transporte — Trabalho</div>
-                <div style="margin-top:2px;font-size:16px;font-weight:700;color:#38bdf8;">${formatBRL(workTotal)}</div>
-              </div>
-              <div class="surface tabular" style="padding:11px;">
-                <div style="font-size:11px;color:#9a9aa6;">Transporte — Lazer</div>
-                <div style="margin-top:2px;font-size:16px;font-weight:700;color:#f43f5e;">${formatBRL(leisureTotal)}</div>
-              </div>
-            </div>
+            '<div class="grid-2" style="margin-top:12px;">' +
+              '<div class="surface tabular" style="padding:11px;">' +
+                '<div style="font-size:11px;color:#9a9aa6;">Transporte — Trabalho</div>' +
+                '<div style="margin-top:2px;font-size:16px;font-weight:700;color:#38bdf8;">' + formatBRL(workTotal) + "</div>" +
+              "</div>" +
+              '<div class="surface tabular" style="padding:11px;">' +
+                '<div style="font-size:11px;color:#9a9aa6;">Transporte — Lazer</div>' +
+                '<div style="margin-top:2px;font-size:16px;font-weight:700;color:#f43f5e;">' + formatBRL(leisureTotal) + "</div>" +
+              "</div>" +
+            "</div>" +
 
-            <div class="donut-wrap">
-              ${buildDonutSVG(cats, grandTotal)}
-              <div class="donut-center tabular">
-                <div style="font-size:11px;text-transform:uppercase;color:#9a9aa6;">${esc(activeCat ? activeCat.name.split(" / ")[0] : "Fatura Líquida")}</div>
-                <div style="margin-top:2px;font-size:17px;font-weight:800;">${formatBRL(activeCat ? activeCat.total : grandTotal)}</div>
-                <div style="margin-top:2px;font-size:11px;font-weight:600;color:#34d399;">${activeCat ? ((activeCat.total / (grandTotal || 1)) * 100).toFixed(1) + "% · " + activeCat.count + " itens" : entries.length + " itens"}</div>
-              </div>
-            </div>
+            '<div class="donut-wrap">' +
+              buildDonutSVG(cats, grandTotal) +
+              '<div class="donut-center tabular">' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#9a9aa6;">' + esc(activeCat ? activeCat.name.split(" / ")[0] : "Fatura Líquida") + "</div>" +
+                '<div style="margin-top:2px;font-size:17px;font-weight:800;">' + formatBRL(activeCat ? activeCat.total : grandTotal) + "</div>" +
+                '<div style="margin-top:2px;font-size:11px;font-weight:600;color:#34d399;">' + (activeCat ? ((activeCat.total / (grandTotal || 1)) * 100).toFixed(1) + "% · " + activeCat.count + " itens" : entries.length + " itens") + "</div>" +
+              "</div>" +
+            "</div>" +
 
-            <div style="display:flex;flex-direction:column;gap:9px;">${catsHtml}</div>
-          </div>
-        `;
+            '<div style="display:flex;flex-direction:column;gap:9px;">' + catsHtml + "</div>" +
+          "</div>";
       }
 
-      document.getElementById("app").addEventListener("click", e => {
-        const actionEl = e.target.closest("[data-action]");
+      document.getElementById("app").addEventListener("click", function (e) {
+        var actionEl = e.target.closest("[data-action]");
         if (actionEl && actionEl.getAttribute("data-action") === "refresh") {
           syncPull(false);
           return;
         }
-        const catEl = e.target.closest("[data-cat]");
+        var catEl = e.target.closest("[data-cat]");
         if (catEl) {
-          const name = decodeURIComponent(catEl.getAttribute("data-cat"));
+          var name = decodeURIComponent(catEl.getAttribute("data-cat"));
           selectedCategory = selectedCategory === name ? null : name;
           renderApp();
         }
@@ -642,13 +661,13 @@
 
       renderApp();
       syncPull(false);
-      setInterval(() => {
+      setInterval(function () {
         if (!document.hidden) syncPull(true);
       }, AUTO_SYNC_INTERVAL_MS);
-      document.addEventListener("visibilitychange", () => {
+      document.addEventListener("visibilitychange", function () {
         if (!document.hidden) syncPull(true);
       });
-      window.addEventListener("focus", () => syncPull(true));
+      window.addEventListener("focus", function () { syncPull(true); });
     })();
   </script>
 </body>
