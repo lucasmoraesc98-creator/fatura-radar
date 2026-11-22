@@ -3,60 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fatura Radar — Lançamento por Voz / Texto</title>
+  <title>Fatura Radar — Dashboard & Voz</title>
   <style>
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    :root {
+      --bg: #0d1015;
+      --card: #151922;
+      --card-2: #1b202c;
+      --border: #283042;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #7c3aed;
+      --accent-2: #8b5cf6;
+      --ok: #10b981;
+      --warn: #ef4444;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     body {
       margin: 0;
-      background: #0f1115;
-      color: #f3f4f6;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px 14px 48px;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
       display: flex;
-      justify-content: center;
-      padding: 24px 16px;
+      flex-direction: column;
+      gap: 18px;
     }
-    .app {
-      width: 100%;
-      max-width: 520px;
-      background: #181b22;
-      border: 1px solid #2a2f3a;
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    .btn-refresh {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .btn-refresh:hover { border-color: var(--accent-2); }
+
+    /* Barra de lançamento (Microfone + Texto) */
+    .input-box {
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 20px;
+      padding: 16px;
     }
-    h1 { margin: 0 0 4px; font-size: 20px; }
-    p.sub { margin: 0 0 18px; color: #9ca3af; font-size: 13px; }
     .row { display: flex; gap: 8px; }
-    input {
+    input#txtGasto {
       flex: 1;
       padding: 12px 14px;
       border-radius: 10px;
-      border: 1px solid #323846;
-      background: #101318;
-      color: #fff;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
       font-size: 15px;
       outline: none;
     }
-    input:focus { border-color: #7c3aed; }
-    button {
+    input#txtGasto:focus { border-color: var(--accent-2); }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
       border: none;
       border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 15px;
-      font-weight: 600;
+      padding: 12px 18px;
+      font-weight: 700;
+      font-size: 14px;
       cursor: pointer;
-      color: #fff;
-      background: #7c3aed;
-      transition: opacity 0.15s, transform 0.1s;
     }
-    button:active { transform: scale(0.98); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
     #btnMic {
-      background: #252b38;
-      border: 1px solid #384152;
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      color: #fff;
+      border-radius: 10px;
       min-width: 48px;
+      font-size: 18px;
+      cursor: pointer;
     }
     #btnMic.listening {
-      background: #dc2626;
-      border-color: #ef4444;
+      background: var(--warn);
+      border-color: #f87171;
       animation: pulse 1s infinite;
     }
     @keyframes pulse {
@@ -64,56 +101,197 @@
       50% { opacity: 0.65; }
     }
     .status {
-      margin-top: 12px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: #12151c;
-      border: 1px solid #252a34;
+      margin-top: 10px;
       font-size: 13px;
-      color: #d1d5db;
-      min-height: 40px;
-      white-space: pre-line;
+      color: var(--muted);
+      min-height: 18px;
     }
-    .feed { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
-    .item {
+
+    /* KPIs globais */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .kpi label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); display: block; }
+    .kpi strong { font-size: 20px; display: block; margin-top: 6px; }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+
+    /* Cards de categorias */
+    .section-title { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
+    .cats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 12px;
+    }
+    .cat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .cat-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .cat-name { font-weight: 700; font-size: 14px; }
+    .cat-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge-ok { background: rgba(16, 185, 129, 0.15); color: var(--ok); }
+    .badge-warn { background: rgba(239, 68, 68, 0.15); color: var(--warn); }
+    .cat-vals {
+      margin-top: 8px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      background: #12151c;
-      border: 1px solid #232832;
-      border-radius: 10px;
-      padding: 10px 12px;
       font-size: 13px;
+      color: var(--muted);
     }
-    .item small { color: #9ca3af; display: block; margin-top: 2px; }
-    .val { font-weight: 700; color: #34d399; white-space: nowrap; margin-left: 12px; }
+    .cat-vals strong { color: var(--text); }
+    .bar-bg {
+      margin-top: 8px;
+      height: 7px;
+      background: var(--bg);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width 0.25s; }
+    .cat-foot { margin-top: 6px; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+    /* Transporte + Tabela */
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    td.num, th.num { text-align: right; }
+    .table-wrap { max-height: 360px; overflow-y: auto; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <h1>Fatura Radar</h1>
-    <p class="sub">Fale ou digite o gasto — classificação automática via Gemini + planilha</p>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Fatura Radar</h1>
+        <p id="subtitulo">Carregando dados da planilha...</p>
+      </div>
+      <button id="btnAtualizar" class="btn-refresh" type="button">Atualizar painel</button>
+    </header>
 
-    <div class="row">
-      <button id="btnMic" type="button" title="Falar gasto">🎤</button>
-      <input id="txtGasto" type="text" placeholder="Ex: 18 reais de uber agora ou pão no oxxo 12,40" autocomplete="off" />
-      <button id="btnEnviar" type="button">Lançar</button>
-    </div>
+    <!-- Microfone + Campo de Texto -->
+    <section class="input-box">
+      <div class="row">
+        <button id="btnMic" type="button" title="Falar gasto">🎤</button>
+        <input id="txtGasto" type="text" placeholder="Ex: 18 reais de uber hoje ou pão no oxxo 12,40" autocomplete="off" />
+        <button id="btnEnviar" class="primary" type="button">Lançar</button>
+      </div>
+      <div id="status" class="status">Pronto para lançar por voz ou texto.</div>
+    </section>
 
-    <div id="status" class="status">Pronto. Fale no microfone ou digite um gasto.</div>
-    <div id="feed" class="feed"></div>
+    <!-- KPIs Globais -->
+    <section class="kpis">
+      <div class="kpi">
+        <label>Total gasto na fatura</label>
+        <strong id="kpiGasto">R$ 0,00</strong>
+      </div>
+      <div class="kpi">
+        <label>Teto global mensal</label>
+        <strong id="kpiTeto">R$ 2.270,00</strong>
+      </div>
+      <div class="kpi">
+        <label>Saldo geral disponível</label>
+        <strong id="kpiSaldo">R$ 0,00</strong>
+      </div>
+      <div class="kpi">
+        <label>Total de transações</label>
+        <strong id="kpiQtd">0</strong>
+      </div>
+    </section>
+
+    <!-- Categorias vs Tetos -->
+    <section>
+      <h2 class="section-title">Categorias vs. Tetos</h2>
+      <div id="catsGrid" class="cats-grid"></div>
+    </section>
+
+    <!-- Consolidação Transporte -->
+    <section class="two-col">
+      <div class="panel">
+        <h2 class="section-title">Transporte — Trabalho vs. Lazer</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Segmento</th>
+              <th class="num">Qtd</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody id="transpBody">
+            <tr><td colspan="3">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2 class="section-title">Últimos lançamentos</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data / Local</th>
+                <th>Categoria</th>
+                <th class="num">Valor</th>
+              </tr>
+            </thead>
+            <tbody id="ultimosBody">
+              <tr><td colspan="3">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiVxSFII6alKbvmr2v8gnFr7aO8I3aRXhwB6sfhS4_vTW3MAZQKGjnBgWOtqpFoeU4/exec";
 
+    const TETOS = {
+      "Mercado / Hortifruti": 600,
+      "Transporte": 200,
+      "Restaurante / Delivery": 450,
+      "Assinaturas / IA / Apps": 350,
+      "Compras / Presentes": 300,
+      "Conveniência / Dia a dia": 220,
+      "Saúde / Cuidados": 150
+    };
+    const TETO_GLOBAL = 2270;
+
+    const fmtBRL = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
     const btnMic = document.getElementById("btnMic");
     const btnEnviar = document.getElementById("btnEnviar");
+    const btnAtualizar = document.getElementById("btnAtualizar");
     const txtGasto = document.getElementById("txtGasto");
     const statusEl = document.getElementById("status");
-    const feedEl = document.getElementById("feed");
 
-    // Reconhecimento de voz (Chrome / Edge / Android / Safari compatíveis)
+    // Microfone
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
     let ouvindo = false;
@@ -127,32 +305,113 @@
       recognition.onstart = () => {
         ouvindo = true;
         btnMic.classList.add("listening");
-        statusEl.textContent = "Ouvindo... fale o gasto e a categoria/local.";
+        statusEl.textContent = "Ouvindo... fale o gasto.";
       };
-
-      recognition.onresult = (event) => {
-        const transcricao = event.results[0][0].transcript;
-        txtGasto.value = transcricao;
-        statusEl.textContent = `Você falou: "${transcricao}" — enviando...`;
-        enviarGasto(transcricao);
+      recognition.onresult = (e) => {
+        const fala = e.results[0][0].transcript;
+        txtGasto.value = fala;
+        statusEl.textContent = `Você falou: "${fala}" — enviando...`;
+        enviarGasto(fala);
       };
-
-      recognition.onerror = (event) => {
-        statusEl.textContent = `Erro no microfone: ${event.error}`;
+      recognition.onerror = (e) => {
+        statusEl.textContent = `Erro no microfone: ${e.error}`;
       };
-
       recognition.onend = () => {
         ouvindo = false;
         btnMic.classList.remove("listening");
       };
-
       btnMic.addEventListener("click", () => {
         if (!ouvindo) recognition.start();
         else recognition.stop();
       });
     } else {
       btnMic.disabled = true;
-      btnMic.title = "Microfone não suportado neste navegador";
+    }
+
+    function renderDashboard(lancamentos) {
+      const lista = Array.isArray(lancamentos) ? lancamentos : [];
+      const totalGasto = lista.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+      const saldoGeral = TETO_GLOBAL - totalGasto;
+
+      document.getElementById("subtitulo").textContent = `${lista.length} lançamentos sincronizados com a planilha`;
+      document.getElementById("kpiGasto").textContent = fmtBRL(totalGasto);
+      document.getElementById("kpiTeto").textContent = fmtBRL(TETO_GLOBAL);
+
+      const kpiSaldo = document.getElementById("kpiSaldo");
+      kpiSaldo.textContent = fmtBRL(saldoGeral);
+      kpiSaldo.className = saldoGeral >= 0 ? "ok" : "warn";
+      document.getElementById("kpiQtd").textContent = String(lista.length);
+
+      // Categorias
+      const catsGrid = document.getElementById("catsGrid");
+      catsGrid.innerHTML = "";
+
+      Object.entries(TETOS).forEach(([cat, teto]) => {
+        const itensCat = lista.filter(i => i.categoria === cat);
+        const gastoCat = itensCat.reduce((s, i) => s + Number(i.valor || 0), 0);
+        const saldoCat = teto - gastoCat;
+        const pct = teto > 0 ? Math.min(100, (gastoCat / teto) * 100) : 0;
+        const excedido = saldoCat < 0;
+
+        const card = document.createElement("div");
+        card.className = "cat-card";
+        card.innerHTML = `
+          <div class="cat-top">
+            <span class="cat-name">${cat}</span>
+            <span class="cat-badge ${excedido ? "badge-warn" : "badge-ok"}">${excedido ? "Excedido" : "Dentro do Teto"}</span>
+          </div>
+          <div class="cat-vals">
+            <span>Gasto: <strong>${fmtBRL(gastoCat)}</strong></span>
+            <span>Teto: ${fmtBRL(teto)}</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill" style="width:${pct}%; background:${excedido ? "var(--warn)" : "var(--ok)"}"></div>
+          </div>
+          <div class="cat-foot">
+            <span>${itensCat.length} ${itensCat.length === 1 ? "item" : "itens"}</span>
+            <span class="${excedido ? "warn" : "ok"}">Saldo: ${fmtBRL(saldoCat)}</span>
+          </div>
+        `;
+        catsGrid.appendChild(card);
+      });
+
+      // Transporte Trabalho vs Lazer
+      const itensTransp = lista.filter(i => i.categoria === "Transporte");
+      const trab = itensTransp.filter(i => String(i.subtipo).toLowerCase().includes("trabalho"));
+      const lazer = itensTransp.filter(i => !String(i.subtipo).toLowerCase().includes("trabalho"));
+      const somaTrab = trab.reduce((s, i) => s + Number(i.valor || 0), 0);
+      const somaLazer = lazer.reduce((s, i) => s + Number(i.valor || 0), 0);
+
+      document.getElementById("transpBody").innerHTML = `
+        <tr><td>Trabalho</td><td class="num">${trab.length}</td><td class="num">${fmtBRL(somaTrab)}</td></tr>
+        <tr><td>Lazer</td><td class="num">${lazer.length}</td><td class="num">${fmtBRL(somaLazer)}</td></tr>
+        <tr><td><strong>Total</strong></td><td class="num"><strong>${itensTransp.length}</strong></td><td class="num"><strong>${fmtBRL(somaTrab + somaLazer)}</strong></td></tr>
+      `;
+
+      // Últimos lançamentos (mais recentes no topo)
+      const ultimos = [...lista].reverse().slice(0, 25);
+      const ultimosBody = document.getElementById("ultimosBody");
+      ultimosBody.innerHTML = ultimos.map(i => `
+        <tr>
+          <td><strong>${i.estabelecimento}</strong><br><small style="color:var(--muted)">${i.data}</small></td>
+          <td>${i.categoria}</td>
+          <td class="num">${fmtBRL(i.valor)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="3">Sem lançamentos</td></tr>`;
+    }
+
+    async function carregarDados() {
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?t=${Date.now()}`);
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.lancamentos)) {
+          renderDashboard(data.lancamentos);
+        } else {
+          statusEl.textContent = "Não foi possível ler os lançamentos da planilha.";
+        }
+      } catch (err) {
+        statusEl.textContent = `Erro ao carregar dashboard: ${err.message}`;
+      }
     }
 
     async function enviarGasto(texto) {
@@ -160,7 +419,7 @@
       if (!msg) return;
 
       btnEnviar.disabled = true;
-      statusEl.textContent = "Classificando e salvando na planilha...";
+      statusEl.textContent = "Salvando na planilha...";
 
       try {
         const res = await fetch(APPS_SCRIPT_URL, {
@@ -176,27 +435,15 @@
         }
 
         if (data.acao === "excluido") {
-          statusEl.textContent = `Removido: ${data.removido.estabelecimento} — R$ ${Number(data.removido.valor).toFixed(2)}`;
+          statusEl.textContent = `Removido: ${data.removido.estabelecimento} (${fmtBRL(data.removido.valor)})`;
         } else {
-          const item = data.item;
-          const valorFmt = Number(item.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-          statusEl.textContent = `Salvo (#${data.id}): ${item.estabelecimento} • ${item.categoria} (${item.subtipo})`;
-
-          const card = document.createElement("div");
-          card.className = "item";
-          card.innerHTML = `
-            <div>
-              <strong>${item.estabelecimento}</strong>
-              <small>${item.data} • ${item.categoria} • ${item.subtipo}</small>
-            </div>
-            <div class="val">${valorFmt}</div>
-          `;
-          feedEl.prepend(card);
+          statusEl.textContent = `Salvo: ${data.item.estabelecimento} • ${data.item.categoria} (${fmtBRL(data.item.valor)})`;
         }
 
         txtGasto.value = "";
+        await carregarDados();
       } catch (err) {
-        statusEl.textContent = `Falha de conexão: ${err.message}`;
+        statusEl.textContent = `Erro ao enviar: ${err.message}`;
       } finally {
         btnEnviar.disabled = false;
       }
@@ -206,6 +453,9 @@
     txtGasto.addEventListener("keydown", (e) => {
       if (e.key === "Enter") enviarGasto();
     });
+    btnAtualizar.addEventListener("click", carregarDados);
+
+    carregarDados();
   </script>
 </body>
 </html>
