@@ -2,917 +2,210 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#09090b" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <title>Fatura Radar — Controle Mensal Nov 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fatura Radar — Lançamento por Voz / Texto</title>
   <style>
-    :root {
-      --bg: #09090b;
-      --surface: #121216;
-      --surface-2: #18181f;
-      --surface-3: #20202a;
-      --border: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.22);
-      --text: #f4f4f6;
-      --muted: #9a9aa6;
-      --muted-2: #71717a;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
-
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body {
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
       margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-      min-height: 100dvh;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    .tabular { font-variant-numeric: tabular-nums; }
-
-    .app-shell {
-      width: 100%;
-      max-width: 460px;
-      margin: 0 auto;
-      padding: calc(14px + var(--safe-top)) 14px calc(36px + var(--safe-bottom));
+      background: #0f1115;
+      color: #f3f4f6;
       display: flex;
-      flex-direction: column;
-      gap: 12px;
+      justify-content: center;
+      padding: 24px 16px;
     }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 15px;
-    }
-
-    .surface {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
+    .app {
+      width: 100%;
+      max-width: 520px;
+      background: #181b22;
+      border: 1px solid #2a2f3a;
       border-radius: 16px;
+      padding: 20px;
     }
-
-    .row-between {
+    h1 { margin: 0 0 4px; font-size: 20px; }
+    p.sub { margin: 0 0 18px; color: #9ca3af; font-size: 13px; }
+    .row { display: flex; gap: 8px; }
+    input {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #323846;
+      background: #101318;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+    }
+    input:focus { border-color: #7c3aed; }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      background: #7c3aed;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #btnMic {
+      background: #252b38;
+      border: 1px solid #384152;
+      min-width: 48px;
+    }
+    #btnMic.listening {
+      background: #dc2626;
+      border-color: #ef4444;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .status {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #12151c;
+      border: 1px solid #252a34;
+      font-size: 13px;
+      color: #d1d5db;
+      min-height: 40px;
+      white-space: pre-line;
+    }
+    .feed { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+    .item {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 8px;
-    }
-
-    .pill {
-      display: inline-flex;
       align-items: center;
-      gap: 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #d4d4d8;
+      background: #12151c;
+      border: 1px solid #232832;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
     }
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      flex-shrink: 0;
-    }
-
-    .btn-ghost {
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #d4d4d8;
-      cursor: pointer;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .badge {
-      display: inline-block;
-      margin-left: 5px;
-      padding: 1px 6px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 700;
-    }
-
-    .badge-work { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; }
-    .badge-leisure { background: rgba(244, 63, 94, 0.18); color: #fda4af; }
-    .badge-refund { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
-
-    .cat-card {
-      padding: 12px;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease;
-    }
-
-    .cat-card.expanded {
-      background: var(--surface-3);
-      border-color: var(--border-strong);
-    }
-
-    .bar-track {
-      margin-top: 8px;
-      height: 6px;
-      width: 100%;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      overflow: hidden;
-    }
-
-    .bar-fill {
-      height: 100%;
-      border-radius: 999px;
-    }
-
-    .donut-wrap {
-      position: relative;
-      width: 210px;
-      height: 210px;
-      margin: 14px auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .donut-center {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 0 14px;
-      pointer-events: none;
-    }
-
-    .truncate {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    .item small { color: #9ca3af; display: block; margin-top: 2px; }
+    .val { font-weight: 700; color: #34d399; white-space: nowrap; margin-left: 12px; }
   </style>
 </head>
 <body>
-  <div id="app" class="app-shell"></div>
+  <div class="app">
+    <h1>Fatura Radar</h1>
+    <p class="sub">Fale ou digite o gasto — classificação automática via Gemini + planilha</p>
+
+    <div class="row">
+      <button id="btnMic" type="button" title="Falar gasto">🎤</button>
+      <input id="txtGasto" type="text" placeholder="Ex: 18 reais de uber agora ou pão no oxxo 12,40" autocomplete="off" />
+      <button id="btnEnviar" type="button">Lançar</button>
+    </div>
+
+    <div id="status" class="status">Pronto. Fale no microfone ou digite um gasto.</div>
+    <div id="feed" class="feed"></div>
+  </div>
 
   <script>
-    (function () {
-      "use strict";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiVxSFII6alKbvmr2v8gnFr7aO8I3aRXhwB6sfhS4_vTW3MAZQKGjnBgWOtqpFoeU4/exec";
 
-      var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCSi9U6OzTIlQrgIsz4VnHtknyAwBKWJt7xH1NwY7BRICud2_VGXoVCeFfNNq1-rQn/exec";
-      var STORAGE_KEY = "fatura_radar_entries_v11";
-      var SYNC_TIMEOUT_MS = 6000;
-      var AUTO_SYNC_INTERVAL_MS = 20000;
+    const btnMic = document.getElementById("btnMic");
+    const btnEnviar = document.getElementById("btnEnviar");
+    const txtGasto = document.getElementById("txtGasto");
+    const statusEl = document.getElementById("status");
+    const feedEl = document.getElementById("feed");
 
-      var CATEGORY_CAPS = {
-        "Mercado / Hortifruti": 600.00,
-        "Assinaturas / IA / Apps": 350.00,
-        "Restaurante / Delivery": 450.00,
-        "Transporte": 200.00,
-        "Compras / Presentes": 300.00,
-        "Conveniência / Dia a dia": 220.00,
-        "Saúde / Cuidados": 150.00
+    // Reconhecimento de voz (Chrome / Edge / Android / Safari compatíveis)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let ouvindo = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = "pt-BR";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        ouvindo = true;
+        btnMic.classList.add("listening");
+        statusEl.textContent = "Ouvindo... fale o gasto e a categoria/local.";
       };
 
-      var CATEGORY_COLORS = {
-        "Mercado / Hortifruti": "#10b981",
-        "Assinaturas / IA / Apps": "#8b5cf6",
-        "Restaurante / Delivery": "#f97316",
-        "Transporte": "#38bdf8",
-        "Compras / Presentes": "#ec4899",
-        "Conveniência / Dia a dia": "#eab308",
-        "Saúde / Cuidados": "#14b8a6"
+      recognition.onresult = (event) => {
+        const transcricao = event.results[0][0].transcript;
+        txtGasto.value = transcricao;
+        statusEl.textContent = `Você falou: "${transcricao}" — enviando...`;
+        enviarGasto(transcricao);
       };
 
-      var FALLBACK_ITEMS = [
-        ["1", "28/10/2026", "Ebn *Canva04816 - Parcela 9/12", 24.16, "Assinaturas / IA / Apps", "Recorrente", "Crédito", "Fatura Base"],
-        ["2", "20/11/2026", "Apple.Com/Bill", 5.9, "Assinaturas / IA / Apps", "Assinatura", "Crédito", "Fatura Base"],
-        ["3", "20/11/2026", "99food *Lopes Ponte Gr", 83.42, "Mercado / Hortifruti", "Compra do Mês", "Crédito", "Fatura Base"],
-        ["4", "20/11/2026", "99food *99food", 15.0, "Restaurante / Delivery", "Delivery", "Crédito", "Fatura Base"],
-        ["5", "20/11/2026", "Oxxo Galero", 12.4, "Conveniência / Dia a dia", "Padaria / Mercado rápido", "Crédito", "Fatura Base"],
-        ["6", "20/11/2026", "Emv Metrô*163082961", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["7", "20/11/2026", "Lojas Americanas", 2.99, "Conveniência / Dia a dia", "Avulso", "Crédito", "Fatura Base"],
-        ["8", "20/11/2026", "Emv Cptm*163233929", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["9", "19/11/2026", "Keetabr*Pizza 180 Expr", 34.98, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["10", "19/11/2026", "Hortifruti Celso Garci", 60.13, "Mercado / Hortifruti", "Hortifruti", "Crédito", "Fatura Base"],
-        ["11", "19/11/2026", "Anthropic", 122.49, "Assinaturas / IA / Apps", "Crédito Extra Pontual", "Crédito", "Fatura Base"],
-        ["12", "19/11/2026", "Paygo*K Bite Cafe Pae", 44.98, "Restaurante / Delivery", "Café / Refeição", "Crédito", "Fatura Base"],
-        ["13", "19/11/2026", "Raia Drogasil", 45.28, "Saúde / Cuidados", "Farmácia", "Crédito", "Fatura Base"],
-        ["14", "19/11/2026", "Drogaetica", 16.5, "Saúde / Cuidados", "Farmácia", "Crédito", "Fatura Base"],
-        ["15", "18/11/2026", "Emv Metrô*162228299", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["16", "18/11/2026", "Emv Cptm*162287490", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["17", "17/11/2026", "Emv Metrô*161881676", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["18", "17/11/2026", "Vend Perto Machines", 9.28, "Conveniência / Dia a dia", "Vending Machine", "Crédito", "Fatura Base"],
-        ["19", "17/11/2026", "Emv Cptm*161990606", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["20", "15/11/2026", "99food *32.685.644 Lui", 41.98, "Restaurante / Delivery", "Delivery", "Crédito", "Fatura Base"],
-        ["21", "15/11/2026", "Infpay* Larissa Alves", 120.0, "Compras / Presentes", "Compra", "Crédito", "Fatura Base"],
-        ["22", "15/11/2026", "3843 Grsa Cpq Mezanin", 16.0, "Restaurante / Delivery", "Refeição", "Crédito", "Fatura Base"],
-        ["23", "15/11/2026", "Uber Uber *Trip Help.U", 16.98, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["24", "14/11/2026", "Emv Metrô*161206052", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["25", "14/11/2026", "Emv Cptm*161271668", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["26", "14/11/2026", "Emv Metrô*161206027", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["27", "14/11/2026", "Oxxo Galero", 15.12, "Conveniência / Dia a dia", "Padaria / Leite", "Crédito", "Fatura Base"],
-        ["28", "14/11/2026", "Vend Perto Machines", 39.99, "Conveniência / Dia a dia", "Vending Machine", "Crédito", "Fatura Base"],
-        ["29", "13/11/2026", "Anthropic* Claude Sub", 114.4, "Assinaturas / IA / Apps", "Assinatura Padrão", "Crédito", "Fatura Base"],
-        ["30", "13/11/2026", "Hortifruti Celso Garci", 134.94, "Mercado / Hortifruti", "Hortifruti", "Crédito", "Fatura Base"],
-        ["31", "13/11/2026", "Keetabr*56.968.952 Joa", 43.29, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["32", "12/11/2026", "Emv Metrô*160445335", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["33", "12/11/2026", "Apple.Com/Bill", 24.99, "Assinaturas / IA / Apps", "Assinatura", "Crédito", "Fatura Base"],
-        ["34", "12/11/2026", "Casa Oriente", 19.9, "Compras / Presentes", "Compra", "Crédito", "Fatura Base"],
-        ["35", "12/11/2026", "Emv Cptm*160574927", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["36", "11/11/2026", "Conta Vivo", 100.0, "Assinaturas / IA / Apps", "Internet / Telefonia", "Crédito", "Fatura Base"],
-        ["37", "11/11/2026", "Vend Perto Machines", 10.98, "Conveniência / Dia a dia", "Vending Machine", "Crédito", "Fatura Base"],
-        ["38", "10/11/2026", "Hortifruti Celso Garci", 29.91, "Mercado / Hortifruti", "Hortifruti", "Crédito", "Fatura Base"],
-        ["39", "09/11/2026", "Pjt Comercio de Alimen", 12.97, "Mercado / Hortifruti", "Mercado", "Crédito", "Fatura Base"],
-        ["40", "09/11/2026", "Pomar da Vila", 83.45, "Mercado / Hortifruti", "Hortifruti", "Crédito", "Fatura Base"],
-        ["41", "09/11/2026", "Oxxo Galero", 11.78, "Conveniência / Dia a dia", "Padaria / Leite", "Crédito", "Fatura Base"],
-        ["42", "08/11/2026", "Keetabr*Pizza 180 Expr", 31.9, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["43", "08/11/2026", "Uber Uber *Trip Help.U", 31.98, "Transporte", "Lazer", "Crédito", "Fatura Base"],
-        ["44", "08/11/2026", "Uber Uber *Trip Help.U", 41.94, "Transporte", "Lazer", "Crédito", "Fatura Base"],
-        ["45", "08/11/2026", "Netflix Entretenimento", 44.9, "Assinaturas / IA / Apps", "Streaming", "Crédito", "Fatura Base"],
-        ["46", "07/11/2026", "Emv Metrô*158891497", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["47", "07/11/2026", "Oxxo Galero", 12.99, "Conveniência / Dia a dia", "Padaria / Leite", "Crédito", "Fatura Base"],
-        ["48", "07/11/2026", "Mestre Japa Comercio D", 39.9, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["49", "07/11/2026", "Dl*99 Ride", 16.0, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["50", "06/11/2026", "Oxxo Galero", 11.19, "Conveniência / Dia a dia", "Padaria", "Crédito", "Fatura Base"],
-        ["51", "06/11/2026", "Emv Metrô*158555897", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["52", "06/11/2026", "Shopping Sp Market", 12.59, "Conveniência / Dia a dia", "Shopping", "Crédito", "Fatura Base"],
-        ["53", "06/11/2026", "Emv Cptm*158653541", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["54", "05/11/2026", "Emv Metrô*158140298", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["55", "05/11/2026", "Oxxo Galero", 3.85, "Conveniência / Dia a dia", "Padaria", "Crédito", "Fatura Base"],
-        ["56", "05/11/2026", "Emv Cptm*158296287", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["57", "04/11/2026", "Oxxo Galero", 7.98, "Conveniência / Dia a dia", "Padaria", "Crédito", "Fatura Base"],
-        ["58", "04/11/2026", "Hortifruti Celso Garci", 65.88, "Mercado / Hortifruti", "Hortifruti", "Crédito", "Fatura Base"],
-        ["59", "04/11/2026", "Pjt Comercio de Alimen", 10.0, "Mercado / Hortifruti", "Mercado", "Crédito", "Fatura Base"],
-        ["60", "04/11/2026", "Apple.Com/Bill", 7.9, "Assinaturas / IA / Apps", "Assinatura", "Crédito", "Fatura Base"],
-        ["61", "04/11/2026", "Casa Oriente", 14.9, "Compras / Presentes", "Compra", "Crédito", "Fatura Base"],
-        ["62", "03/11/2026", "Vend Perto Machines", 7.99, "Conveniência / Dia a dia", "Vending Machine", "Crédito", "Fatura Base"],
-        ["63", "03/11/2026", "Uber Uber *Trip Help.U", 12.99, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["64", "03/11/2026", "Oxxo Galero", 12.88, "Conveniência / Dia a dia", "Padaria / Leite", "Crédito", "Fatura Base"],
-        ["65", "03/11/2026", "Carbella Studio Hair", 65.0, "Saúde / Cuidados", "Cuidados Pessoais", "Crédito", "Fatura Base"],
-        ["66", "02/11/2026", "Uber Uber *Trip Help.U", 30.95, "Transporte", "Lazer", "Crédito", "Fatura Base"],
-        ["67", "02/11/2026", "Hortifruti Celso Garci", 32.99, "Mercado / Hortifruti", "Hortifruti", "Crédito", "Fatura Base"],
-        ["68", "02/11/2026", "Oxxo Galero", 7.98, "Conveniência / Dia a dia", "Padaria", "Crédito", "Fatura Base"],
-        ["69", "02/11/2026", "Uber Uber *Trip Help.U", 48.43, "Transporte", "Lazer", "Crédito", "Fatura Base"],
-        ["70", "02/11/2026", "Casa Oriente", 35.6, "Compras / Presentes", "Compra", "Crédito", "Fatura Base"],
-        ["71", "01/11/2026", "Uber Uber *Trip Help.U", 24.96, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["72", "01/11/2026", "Tiktok Shop *Jyacessor", 14.49, "Compras / Presentes", "Compra", "Crédito", "Fatura Base"],
-        ["73", "01/11/2026", "Tiktok Shop *Pontocent - Parcela 1/4", 61.23, "Compras / Presentes", "Parcelado 1/4", "Crédito", "Fatura Base"],
-        ["74", "31/10/2026", "Oxxo Galero", 7.29, "Conveniência / Dia a dia", "Padaria", "Crédito", "Fatura Base"],
-        ["75", "31/10/2026", "Uber Uber *Trip Help.U", 50.98, "Transporte", "Lazer", "Crédito", "Fatura Base"],
-        ["76", "31/10/2026", "Keetabr*Pizza 180 Expr", 65.92, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["77", "29/10/2026", "Keetabr*31.160.487 Jer", 27.7, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["78", "29/10/2026", "Japapastelart", 20.0, "Restaurante / Delivery", "Restaurante", "Crédito", "Fatura Base"],
-        ["79", "29/10/2026", "Shopping Sp Market", 6.69, "Conveniência / Dia a dia", "Shopping", "Crédito", "Fatura Base"],
-        ["80", "29/10/2026", "Apple.Com/Bill", 19.9, "Assinaturas / IA / Apps", "Assinatura", "Crédito", "Fatura Base"],
-        ["81", "29/10/2026", "Oxxo Galero", 14.48, "Conveniência / Dia a dia", "Padaria / Leite", "Crédito", "Fatura Base"],
-        ["82", "28/10/2026", "Dl*99 Ride", 13.6, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["83", "28/10/2026", "Uber Uber *Trip Help.U", 5.4, "Transporte", "Trabalho", "Crédito", "Fatura Base"],
-        ["84", "21/11/2026", "Croissant (Café da manhã)", 7.98, "Conveniência / Dia a dia", "Padaria / Café da manhã", "Crédito", "App / Chat Sync"],
-        ["85", "21/11/2026", "Mercado — Compra Almoço (até dia 27)", 57.85, "Mercado / Hortifruti", "Mercado (Crédito)", "Crédito", "Chat Sync"],
-        ["86", "21/11/2026", "Energético (Débito)", 11.99, "Conveniência / Dia a dia", "Bebida / Débito", "Débito", "Chat Sync"]
-      ];
+      recognition.onerror = (event) => {
+        statusEl.textContent = `Erro no microfone: ${event.error}`;
+      };
 
-      function roundCents(n) {
-        return Math.round((Number(n) || 0) * 100) / 100;
-      }
+      recognition.onend = () => {
+        ouvindo = false;
+        btnMic.classList.remove("listening");
+      };
 
-      function toCents(n) {
-        return Math.round(roundCents(n) * 100);
-      }
-
-      function pad2(n) {
-        return String(n).padStart(2, "0");
-      }
-
-      function parseMoney(v) {
-        if (typeof v === "number") return roundCents(v);
-        if (!v) return 0;
-        var s = String(v).split("R$").join("").split(" ").join("").trim();
-        if (s.indexOf(",") !== -1 && s.indexOf(".") !== -1) {
-          s = s.split(".").join("").split(",").join(".");
-        } else if (s.indexOf(",") !== -1) {
-          s = s.split(",").join(".");
-        }
-        var n = parseFloat(s);
-        return isNaN(n) ? 0 : roundCents(n);
-      }
-
-      function formatBRL(v) {
-        return (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      }
-
-      function todayBR() {
-        var d = new Date();
-        return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + "/" + d.getFullYear();
-      }
-
-      function nowTimeBR() {
-        var d = new Date();
-        return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
-      }
-
-      function formatDateBR(raw) {
-        if (!raw) return todayBR();
-        var s = String(raw).trim();
-        var partsSlash = s.split("/");
-        if (partsSlash.length === 3 && partsSlash[2].length === 4) {
-          return pad2(partsSlash[0]) + "/" + pad2(partsSlash[1]) + "/" + partsSlash[2];
-        }
-        var isoPart = s.split("T")[0].split("-");
-        if (isoPart.length === 3 && isoPart[0].length === 4) {
-          return pad2(isoPart[2]) + "/" + pad2(isoPart[1]) + "/" + isoPart[0];
-        }
-        var dt = new Date(s);
-        if (!isNaN(dt.getTime())) {
-          return pad2(dt.getDate()) + "/" + pad2(dt.getMonth() + 1) + "/" + dt.getFullYear();
-        }
-        return s;
-      }
-
-      function sortDateDesc(a, b) {
-        var pa = String(a.data || "").split("/");
-        var pb = String(b.data || "").split("/");
-        var da = pa.length === 3 ? Number(pa[2] + pa[1] + pa[0]) : 0;
-        var db = pb.length === 3 ? Number(pb[2] + pb[1] + pb[0]) : 0;
-        if (db !== da) return db - da;
-        return (Number(b.id) || 0) - (Number(a.id) || 0);
-      }
-
-      var FALLBACK_RECORDS = FALLBACK_ITEMS.map(function (r) {
-        return {
-          id: r[0],
-          data: formatDateBR(r[1]),
-          estabelecimento: r[2],
-          valor: roundCents(r[3]),
-          categoria: r[4],
-          subtipo: r[5] || "",
-          meioPagamento: r[6] || "Crédito",
-          origem: r[7] || "Base"
-        };
+      btnMic.addEventListener("click", () => {
+        if (!ouvindo) recognition.start();
+        else recognition.stop();
       });
+    } else {
+      btnMic.disabled = true;
+      btnMic.title = "Microfone não suportado neste navegador";
+    }
 
-      function readCache() {
-        try {
-          var raw = localStorage.getItem(STORAGE_KEY);
-          var parsed = raw ? JSON.parse(raw) : null;
-          return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
-        } catch (err) {
-          return null;
-        }
-      }
+    async function enviarGasto(texto) {
+      const msg = (texto || txtGasto.value).trim();
+      if (!msg) return;
 
-      function saveCache(list) {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-        } catch (err) {}
-      }
+      btnEnviar.disabled = true;
+      statusEl.textContent = "Classificando e salvando na planilha...";
 
-      var remoteEntries = readCache();
-      var selectedCategory = null;
-      var syncState = "syncing";
-      var isPulling = false;
-      var lastSyncTime = "";
-
-      function getAllEntries() {
-        var source = Array.isArray(remoteEntries) && remoteEntries.length > 0
-          ? remoteEntries
-          : FALLBACK_RECORDS;
-
-        return source
-          .filter(function (it) {
-            if (!it) return false;
-            var desc = String(it.estabelecimento || "").trim().toLowerCase();
-            if (!desc || desc === "total geral" || desc === "estabelecimento") return false;
-            return toCents(it.valor) !== 0;
-          })
-          .map(function (it) {
-            return {
-              id: it.id,
-              data: formatDateBR(it.data),
-              estabelecimento: String(it.estabelecimento || "").trim(),
-              valor: roundCents(it.valor),
-              categoria: String(it.categoria || "Compras / Presentes").trim(),
-              subtipo: String(it.subtipo || "").trim(),
-              meioPagamento: String(it.meioPagamento || "Crédito").trim(),
-              origem: String(it.origem || "Planilha").trim()
-            };
-          })
-          .sort(sortDateDesc);
-      }
-
-      function groupCategories(entries) {
-        var map = {};
-        for (var i = 0; i < entries.length; i++) {
-          var it = entries[i];
-          var cat = it.categoria || "Compras / Presentes";
-          if (!map[cat]) {
-            map[cat] = {
-              name: cat,
-              total: 0,
-              count: 0,
-              items: [],
-              color: CATEGORY_COLORS[cat] || "#10b981",
-              cap: CATEGORY_CAPS[cat] || 300
-            };
-          }
-          map[cat].total = roundCents(map[cat].total + it.valor);
-          map[cat].count += 1;
-          map[cat].items.push(it);
-        }
-        return Object.keys(map)
-          .map(function (k) { return map[k]; })
-          .sort(function (a, b) { return b.total - a.total; });
-      }
-
-      async function fetchTimeout(url, opts) {
-        var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-        var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, SYNC_TIMEOUT_MS) : null;
-        try {
-          var cfg = opts || {};
-          if (ctrl) {
-            cfg.signal = ctrl.signal;
-          }
-          return await fetch(url, cfg);
-        } finally {
-          if (timer) clearTimeout(timer);
-        }
-      }
-
-      async function syncPull(silent) {
-        if (!APPS_SCRIPT_URL || isPulling) return;
-        isPulling = true;
-        if (!silent) {
-          syncState = "syncing";
-          renderApp();
-        }
-
-        try {
-          var sep = APPS_SCRIPT_URL.indexOf("?") !== -1 ? "&" : "?";
-          var res = await fetchTimeout(APPS_SCRIPT_URL + sep + "t=" + Date.now(), {
-            method: "GET",
-            redirect: "follow"
-          });
-          if (!res || !res.ok) throw new Error("HTTP");
-          var data = await res.json();
-          var rawList = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : null);
-
-          if (rawList && rawList.length > 0) {
-            var parsed = rawList.map(function (r, idx) {
-              var desc = String(r.desc || r.estabelecimento || r.Estabelecimento || "").trim();
-              var sub = String(r.subtipo || r["Subtipo / Tag"] || r.tag || "").trim();
-              var rawVal = r.val !== undefined ? r.val : (r.valor !== undefined ? r.valor : r["Valor (R$)"]);
-              var rawPay = String(r.meioPagamento || r.pagamento || "").trim();
-              var isDebit = rawPay.toLowerCase() === "débito"
-                || desc.toLowerCase().indexOf("débito") !== -1
-                || sub.toLowerCase().indexOf("débito") !== -1;
-
-              return {
-                id: String(r.id || r.ID || (idx + 1)),
-                data: formatDateBR(r.date || r.data || r.Data || todayBR()),
-                estabelecimento: desc,
-                valor: parseMoney(rawVal),
-                categoria: String(r.cat || r.categoria || r.Categoria || "Compras / Presentes").trim(),
-                subtipo: sub,
-                meioPagamento: isDebit ? "Débito" : "Crédito",
-                origem: String(r.origem || r.Origem || "Planilha").trim()
-              };
-            }).filter(function (it) {
-              return it.estabelecimento && it.estabelecimento.toLowerCase() !== "total geral" && toCents(it.valor) !== 0;
-            });
-
-            if (parsed.length > 0) {
-              remoteEntries = parsed;
-              saveCache(remoteEntries);
-              syncState = "synced";
-              lastSyncTime = nowTimeBR();
-            } else {
-              syncState = "fallback";
-            }
-          } else {
-            syncState = "fallback";
-          }
-        } catch (err) {
-          syncState = "fallback";
-        } finally {
-          isPulling = false;
-          renderApp();
-        }
-      }
-
-      function el(tag, className, text) {
-        var node = document.createElement(tag);
-        if (className) node.className = className;
-        if (text !== undefined && text !== null) node.textContent = String(text);
-        return node;
-      }
-
-      function buildDonutSVG(categories, total) {
-        var svgNS = "http://www.w3.org/2000/svg";
-        var svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("width", "210");
-        svg.setAttribute("height", "210");
-        svg.setAttribute("viewBox", "0 0 210 210");
-
-        var r = 74;
-        var cx = 105;
-        var cy = 105;
-        var circ = 2 * Math.PI * r;
-        var offset = 0;
-
-        for (var i = 0; i < categories.length; i++) {
-          var cat = categories[i];
-          var val = Math.max(0, cat.total);
-          var frac = total > 0 ? val / total : 0;
-          var dash = frac * circ;
-          var gap = Math.max(0, circ - dash);
-          var active = selectedCategory === cat.name;
-          var opacity = selectedCategory && !active ? "0.35" : "1";
-
-          var circle = document.createElementNS(svgNS, "circle");
-          circle.setAttribute("cx", String(cx));
-          circle.setAttribute("cy", String(cy));
-          circle.setAttribute("r", String(r));
-          circle.setAttribute("fill", "none");
-          circle.setAttribute("stroke", cat.color);
-          circle.setAttribute("stroke-width", active ? "24" : "20");
-          circle.setAttribute("stroke-dasharray", dash.toFixed(2) + " " + gap.toFixed(2));
-          circle.setAttribute("stroke-dashoffset", (-offset).toFixed(2));
-          circle.setAttribute("transform", "rotate(-90 " + cx + " " + cy + ")");
-          circle.setAttribute("opacity", opacity);
-          circle.style.cursor = "pointer";
-          (function (catName) {
-            circle.addEventListener("click", function () {
-              selectedCategory = selectedCategory === catName ? null : catName;
-              renderApp();
-            });
-          })(cat.name);
-
-          svg.appendChild(circle);
-          offset += dash;
-        }
-
-        return svg;
-      }
-
-      function createBadge(subtipo, valor) {
-        if (subtipo === "Trabalho") {
-          return el("span", "badge badge-work", "Trabalho");
-        }
-        if (subtipo === "Lazer") {
-          return el("span", "badge badge-leisure", "Lazer");
-        }
-        if (valor < 0) {
-          return el("span", "badge badge-refund", "Estorno");
-        }
-        return null;
-      }
-
-      function renderApp() {
-        var root = document.getElementById("app");
-        if (!root) return;
-
-        var entries = getAllEntries();
-        var grandTotal = roundCents(entries.reduce(function (s, x) { return s + x.valor; }, 0));
-        var debitTotal = roundCents(entries.filter(function (x) {
-          return String(x.meioPagamento).toLowerCase() === "débito";
-        }).reduce(function (s, x) { return s + x.valor; }, 0));
-        var creditTotal = roundCents(grandTotal - debitTotal);
-
-        var cats = groupCategories(entries);
-        var activeCat = null;
-        for (var i = 0; i < cats.length; i++) {
-          if (cats[i].name === selectedCategory) {
-            activeCat = cats[i];
-            break;
-          }
-        }
-
-        var workTotal = roundCents(entries.filter(function (x) {
-          return x.categoria === "Transporte" && x.subtipo === "Trabalho";
-        }).reduce(function (s, x) { return s + x.valor; }, 0));
-
-        var leisureTotal = roundCents(entries.filter(function (x) {
-          return x.categoria === "Transporte" && x.subtipo === "Lazer";
-        }).reduce(function (s, x) { return s + x.valor; }, 0));
-
-        var syncColor = syncState === "synced" ? "#34d399" : (syncState === "syncing" ? "#38bdf8" : "#fbbf24");
-        var syncText = syncState === "synced"
-          ? "Planilha OK" + (lastSyncTime ? " · " + lastSyncTime : "")
-          : (syncState === "syncing" ? "Sincronizando..." : "Cache Local");
-
-        root.textContent = "";
-
-        var topCard = el("div", "card");
-        var headerRow = el("div", "row-between");
-        var titleSpan = el("span", "", "Fatura Radar — Nov 2026");
-        titleSpan.style.fontSize = "11px";
-        titleSpan.style.fontWeight = "800";
-        titleSpan.style.letterSpacing = ".06em";
-        titleSpan.style.textTransform = "uppercase";
-        titleSpan.style.color = "#34d399";
-
-        var rightControls = el("div", "");
-        rightControls.style.display = "flex";
-        rightControls.style.alignItems = "center";
-        rightControls.style.gap = "6px";
-
-        var pill = el("span", "pill");
-        var dot = el("span", "dot");
-        dot.style.background = syncColor;
-        pill.appendChild(dot);
-        pill.appendChild(el("span", "", syncText));
-
-        var refreshBtn = el("button", "btn-ghost", isPulling ? "..." : "Atualizar ↻");
-        refreshBtn.type = "button";
-        refreshBtn.addEventListener("click", function () {
-          syncPull(false);
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ texto: msg })
         });
+        const data = await res.json();
 
-        rightControls.appendChild(pill);
-        rightControls.appendChild(refreshBtn);
-        headerRow.appendChild(titleSpan);
-        headerRow.appendChild(rightControls);
-        topCard.appendChild(headerRow);
-
-        var recentLabel = el("div", "", "Últimos Lançamentos");
-        recentLabel.style.marginTop = "10px";
-        recentLabel.style.fontSize = "11px";
-        recentLabel.style.fontWeight = "700";
-        recentLabel.style.letterSpacing = ".05em";
-        recentLabel.style.textTransform = "uppercase";
-        recentLabel.style.color = "#9a9aa6";
-        topCard.appendChild(recentLabel);
-
-        var recent = entries.slice(0, 5);
-        for (var rIdx = 0; rIdx < recent.length; rIdx++) {
-          var it = recent[rIdx];
-          var row = el("div", "row-between tabular");
-          row.style.padding = "7px 0";
-          row.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
-          row.style.fontSize = "12px";
-
-          var left = el("div", "");
-          left.style.minWidth = "0";
-          left.style.display = "flex";
-          left.style.alignItems = "center";
-          left.style.gap = "8px";
-
-          var rDot = el("span", "dot");
-          rDot.style.background = "#34d399";
-
-          var textBox = el("div", "truncate");
-          var nameSpan = el("span", "", it.estabelecimento);
-          nameSpan.style.fontWeight = "600";
-          textBox.appendChild(nameSpan);
-
-          var bdg = createBadge(it.subtipo, it.valor);
-          if (bdg) textBox.appendChild(bdg);
-
-          var metaDiv = el("div", "", it.data + " · " + it.categoria + " · " + (it.meioPagamento || "Crédito"));
-          metaDiv.style.fontSize = "10px";
-          metaDiv.style.color = "#71717a";
-          textBox.appendChild(metaDiv);
-
-          left.appendChild(rDot);
-          left.appendChild(textBox);
-
-          var valSpan = el("span", "", formatBRL(it.valor));
-          valSpan.style.fontWeight = "700";
-          valSpan.style.color = it.valor < 0 ? "#6ee7b7" : "#f4f4f6";
-          valSpan.style.flexShrink = "0";
-
-          row.appendChild(left);
-          row.appendChild(valSpan);
-          topCard.appendChild(row);
+        if (!data.ok) {
+          statusEl.textContent = `Erro: ${data.erro || "Falha ao salvar"}`;
+          return;
         }
 
-        root.appendChild(topCard);
+        if (data.acao === "excluido") {
+          statusEl.textContent = `Removido: ${data.removido.estabelecimento} — R$ ${Number(data.removido.valor).toFixed(2)}`;
+        } else {
+          const item = data.item;
+          const valorFmt = Number(item.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+          statusEl.textContent = `Salvo (#${data.id}): ${item.estabelecimento} • ${item.categoria} (${item.subtipo})`;
 
-        var mainCard = el("div", "card");
-        var consTitle = el("div", "", "Total Consolidado");
-        consTitle.style.fontSize = "11px";
-        consTitle.style.fontWeight = "800";
-        consTitle.style.letterSpacing = ".06em";
-        consTitle.style.textTransform = "uppercase";
-        consTitle.style.color = "#34d399";
-
-        var totalDiv = el("div", "tabular", formatBRL(grandTotal));
-        totalDiv.style.marginTop = "2px";
-        totalDiv.style.fontSize = "28px";
-        totalDiv.style.fontWeight = "800";
-        totalDiv.style.letterSpacing = "-0.02em";
-
-        var subDiv = el("div", "tabular", entries.length + " lançamentos · Crédito: " + formatBRL(creditTotal) + " · Débito: " + formatBRL(debitTotal));
-        subDiv.style.fontSize = "12px";
-        subDiv.style.color = "#9a9aa6";
-
-        mainCard.appendChild(consTitle);
-        mainCard.appendChild(totalDiv);
-        mainCard.appendChild(subDiv);
-
-        var grid2 = el("div", "grid-2");
-        grid2.style.marginTop = "12px";
-
-        var workBox = el("div", "surface tabular");
-        workBox.style.padding = "11px";
-        var workLbl = el("div", "", "Transporte — Trabalho");
-        workLbl.style.fontSize = "11px";
-        workLbl.style.color = "#9a9aa6";
-        var workVal = el("div", "", formatBRL(workTotal));
-        workVal.style.marginTop = "2px";
-        workVal.style.fontSize = "16px";
-        workVal.style.fontWeight = "700";
-        workVal.style.color = "#38bdf8";
-        workBox.appendChild(workLbl);
-        workBox.appendChild(workVal);
-
-        var leisureBox = el("div", "surface tabular");
-        leisureBox.style.padding = "11px";
-        var leisureLbl = el("div", "", "Transporte — Lazer");
-        leisureLbl.style.fontSize = "11px";
-        leisureLbl.style.color = "#9a9aa6";
-        var leisureVal = el("div", "", formatBRL(leisureTotal));
-        leisureVal.style.marginTop = "2px";
-        leisureVal.style.fontSize = "16px";
-        leisureVal.style.fontWeight = "700";
-        leisureVal.style.color = "#f43f5e";
-        leisureBox.appendChild(leisureLbl);
-        leisureBox.appendChild(leisureVal);
-
-        grid2.appendChild(workBox);
-        grid2.appendChild(leisureBox);
-        mainCard.appendChild(grid2);
-
-        var donutWrap = el("div", "donut-wrap");
-        donutWrap.appendChild(buildDonutSVG(cats, grandTotal));
-
-        var donutCenter = el("div", "donut-center tabular");
-        var dcTop = el("div", "", activeCat ? activeCat.name.split(" / ")[0] : "Fatura Líquida");
-        dcTop.style.fontSize = "11px";
-        dcTop.style.textTransform = "uppercase";
-        dcTop.style.color = "#9a9aa6";
-
-        var dcMid = el("div", "", formatBRL(activeCat ? activeCat.total : grandTotal));
-        dcMid.style.marginTop = "2px";
-        dcMid.style.fontSize = "17px";
-        dcMid.style.fontWeight = "800";
-
-        var dcBot = el("div", "", activeCat
-          ? ((activeCat.total / (grandTotal || 1)) * 100).toFixed(1) + "% · " + activeCat.count + " itens"
-          : entries.length + " itens");
-        dcBot.style.marginTop = "2px";
-        dcBot.style.fontSize = "11px";
-        dcBot.style.fontWeight = "600";
-        dcBot.style.color = "#34d399";
-
-        donutCenter.appendChild(dcTop);
-        donutCenter.appendChild(dcMid);
-        donutCenter.appendChild(dcBot);
-        donutWrap.appendChild(donutCenter);
-        mainCard.appendChild(donutWrap);
-
-        var catList = el("div", "");
-        catList.style.display = "flex";
-        catList.style.flexDirection = "column";
-        catList.style.gap = "9px";
-
-        for (var cIdx = 0; cIdx < cats.length; cIdx++) {
-          var c = cats[cIdx];
-          var share = grandTotal > 0 ? ((c.total / grandTotal) * 100).toFixed(1) : "0.0";
-          var ratio = c.cap > 0 ? Math.min(100, Math.max(0, (c.total / c.cap) * 100)).toFixed(1) : "100.0";
-          var bal = roundCents(c.cap - c.total);
-          var balTxt = bal >= 0 ? "Saldo: " + formatBRL(bal) : "Acima: " + formatBRL(Math.abs(bal));
-          var exp = selectedCategory === c.name;
-
-          var catCard = el("div", "surface cat-card" + (exp ? " expanded" : ""));
-          (function (catName) {
-            catCard.addEventListener("click", function () {
-              selectedCategory = selectedCategory === catName ? null : catName;
-              renderApp();
-            });
-          })(c.name);
-
-          var cHead = el("div", "row-between tabular");
-          cHead.style.fontSize = "13px";
-          cHead.style.fontWeight = "600";
-
-          var cLeft = el("span", "");
-          cLeft.style.display = "flex";
-          cLeft.style.alignItems = "center";
-          cLeft.style.gap = "8px";
-          cLeft.style.minWidth = "0";
-
-          var cDot = el("span", "dot");
-          cDot.style.width = "10px";
-          cDot.style.height = "10px";
-          cDot.style.background = c.color;
-
-          var cName = el("span", "truncate", c.name);
-          cLeft.appendChild(cDot);
-          cLeft.appendChild(cName);
-
-          var cRight = el("span", "", formatBRL(c.total) + " (" + share + "%)");
-          cRight.style.flexShrink = "0";
-
-          cHead.appendChild(cLeft);
-          cHead.appendChild(cRight);
-          catCard.appendChild(cHead);
-
-          var track = el("div", "bar-track");
-          var fill = el("div", "bar-fill");
-          fill.style.width = ratio + "%";
-          fill.style.background = c.color;
-          track.appendChild(fill);
-          catCard.appendChild(track);
-
-          var cFoot = el("div", "row-between tabular");
-          cFoot.style.marginTop = "6px";
-          cFoot.style.fontSize = "11px";
-          cFoot.style.color = "#9a9aa6";
-
-          var cMeta = el("span", "truncate", c.count + " itens · Teto " + formatBRL(c.cap) + " (" + balTxt + ")");
-          var cToggle = el("span", "", exp ? "Ocultar ▲" : "Itens ▼");
-          cToggle.style.flexShrink = "0";
-          cFoot.appendChild(cMeta);
-          cFoot.appendChild(cToggle);
-          catCard.appendChild(cFoot);
-
-          if (exp) {
-            var itemsBox = el("div", "");
-            itemsBox.style.marginTop = "10px";
-            itemsBox.style.paddingTop = "10px";
-            itemsBox.style.borderTop = "1px solid rgba(255,255,255,0.08)";
-            itemsBox.style.display = "flex";
-            itemsBox.style.flexDirection = "column";
-            itemsBox.style.gap = "6px";
-
-            for (var eIdx = 0; eIdx < c.items.length; eIdx++) {
-              var e = c.items[eIdx];
-              var eRow = el("div", "row-between tabular");
-              eRow.style.fontSize = "12px";
-              eRow.style.color = "#9a9aa6";
-
-              var eLeft = el("span", "truncate");
-              eLeft.appendChild(document.createTextNode(e.data + " · "));
-              var eStrong = el("strong", "", e.estabelecimento);
-              eStrong.style.color = "#f4f4f6";
-              eLeft.appendChild(eStrong);
-
-              var eBdg = createBadge(e.subtipo, e.valor);
-              if (eBdg) eLeft.appendChild(eBdg);
-
-              var eVal = el("span", "", formatBRL(e.valor));
-              eVal.style.fontWeight = "600";
-              eVal.style.color = e.valor < 0 ? "#6ee7b7" : "#e4e4e7";
-              eVal.style.flexShrink = "0";
-
-              eRow.appendChild(eLeft);
-              eRow.appendChild(eVal);
-              itemsBox.appendChild(eRow);
-            }
-
-            catCard.appendChild(itemsBox);
-          }
-
-          catList.appendChild(catCard);
+          const card = document.createElement("div");
+          card.className = "item";
+          card.innerHTML = `
+            <div>
+              <strong>${item.estabelecimento}</strong>
+              <small>${item.data} • ${item.categoria} • ${item.subtipo}</small>
+            </div>
+            <div class="val">${valorFmt}</div>
+          `;
+          feedEl.prepend(card);
         }
 
-        mainCard.appendChild(catList);
-        root.appendChild(mainCard);
+        txtGasto.value = "";
+      } catch (err) {
+        statusEl.textContent = `Falha de conexão: ${err.message}`;
+      } finally {
+        btnEnviar.disabled = false;
       }
+    }
 
-      renderApp();
-      syncPull(false);
-      setInterval(function () {
-        if (!document.hidden) syncPull(true);
-      }, AUTO_SYNC_INTERVAL_MS);
-      document.addEventListener("visibilitychange", function () {
-        if (!document.hidden) syncPull(true);
-      });
-      window.addEventListener("focus", function () { syncPull(true); });
-    })();
+    btnEnviar.addEventListener("click", () => enviarGasto());
+    txtGasto.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") enviarGasto();
+    });
   </script>
 </body>
 </html>
