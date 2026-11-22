@@ -256,11 +256,10 @@
     (function () {
       "use strict";
 
-      // Cole aqui a URL da implantação do seu Google Apps Script
       const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCSi9U6OzTIlQrgIsz4VnHtknyAwBKWJt7xH1NwY7BRICud2_VGXoVCeFfNNq1-rQn/exec";
       const STORAGE_KEY = "fatura_radar_entries_v6";
       const SYNC_TIMEOUT_MS = 4500;
-      const AUTO_SYNC_INTERVAL_MS = 20000; // Atualiza automaticamente a cada 20s enquanto aberto
+      const AUTO_SYNC_INTERVAL_MS = 20000;
 
       const CATEGORY_CAPS = {
         "Mercado / Hortifruti": 600.00,
@@ -282,13 +281,11 @@
         "Saúde / Cuidados": "#14b8a6"
       };
 
-      // Base consolidada Nov 2026: 86 itens = R$ 2.404,76 (já com reembolso de -R$ 57,09 sobre BASE-01 de R$ 125,51)
       const OFFICIAL_ITEMS = [
         ["ITEM-86", "21/11/2026", "Energético (Débito)", 11.99, "Conveniência / Dia a dia", "", "Débito", "Chat / Planilha", "synced"],
         ["ITEM-85", "21/11/2026", "Mercado — Compra Almoço (até dia 27)", 57.85, "Mercado / Hortifruti", "", "Crédito", "Chat / Planilha", "synced"],
         ["ITEM-84", "21/11/2026", "Croissant (Café da manhã)", 7.98, "Conveniência / Dia a dia", "", "Crédito", "Chat / Planilha", "synced"],
 
-        // Mercado / Hortifruti (10 itens = R$ 556,54 — BASE-01 ajustada de R$ 125,51 para R$ 68,42 após reembolso de R$ 57,09)
         ["BASE-01", "20/11/2026", "99food *Lopes Ponte Gr (Reembolso -R$ 57,09)", 68.42, "Mercado / Hortifruti", "", "Crédito", "Base", "synced"],
         ["BASE-02", "19/11/2026", "Hortifruti Celso Garci", 60.13, "Mercado / Hortifruti", "", "Crédito", "Base", "synced"],
         ["BASE-03", "13/11/2026", "Hortifruti Celso Garci", 134.94, "Mercado / Hortifruti", "", "Crédito", "Base", "synced"],
@@ -299,7 +296,6 @@
         ["BASE-08", "04/11/2026", "Pjt Comercio de Alimen", 10.00, "Mercado / Hortifruti", "", "Crédito", "Base", "synced"],
         ["BASE-09", "02/11/2026", "Hortifruti Celso Garci", 32.99, "Mercado / Hortifruti", "", "Crédito", "Base", "synced"],
 
-        // Assinaturas / IA / Apps (9 itens = R$ 464,64)
         ["BASE-11", "20/11/2026", "Apple.Com/Bill", 5.90, "Assinaturas / IA / Apps", "", "Crédito", "Base", "synced"],
         ["BASE-12", "19/11/2026", "Anthropic", 122.49, "Assinaturas / IA / Apps", "", "Crédito", "Base", "synced"],
         ["BASE-13", "13/11/2026", "Anthropic* Claude Sub", 114.40, "Assinaturas / IA / Apps", "", "Crédito", "Base", "synced"],
@@ -310,7 +306,6 @@
         ["BASE-18", "29/10/2026", "Apple.Com/Bill", 19.90, "Assinaturas / IA / Apps", "", "Crédito", "Base", "synced"],
         ["BASE-10", "28/10/2026", "Ebn *Canva04816 - Parcela 9/12", 24.16, "Assinaturas / IA / Apps", "", "Crédito", "Base", "synced"],
 
-        // Restaurante / Delivery (11 itens = R$ 381,65)
         ["BASE-19", "20/11/2026", "99food *99food", 15.00, "Restaurante / Delivery", "", "Crédito", "Base", "synced"],
         ["BASE-20", "19/11/2026", "Keetabr*Pizza 180 Expr", 34.98, "Restaurante / Delivery", "", "Crédito", "Base", "synced"],
         ["BASE-21", "19/11/2026", "Paygo*K Bite Cafe Pae", 44.98, "Restaurante / Delivery", "", "Crédito", "Base", "synced"],
@@ -323,7 +318,6 @@
         ["BASE-28", "29/10/2026", "Keetabr*31.160.487 Jer", 27.70, "Restaurante / Delivery", "", "Crédito", "Base", "synced"],
         ["BASE-29", "29/10/2026", "Japapastelart", 20.00, "Restaurante / Delivery", "", "Crédito", "Base", "synced"],
 
-        // Transporte (27 itens = R$ 380,61)
         ["BASE-30", "20/11/2026", "Emv Metrô*163082961", 5.40, "Transporte", "Trabalho", "Crédito", "Base", "synced"],
         ["BASE-31", "20/11/2026", "Emv Cptm*163233929", 5.40, "Transporte", "Trabalho", "Crédito", "Base", "synced"],
         ["BASE-32", "18/11/2026", "Emv Metrô*162228299", 5.40, "Transporte", "Trabalho", "Crédito", "Base", "synced"],
@@ -352,7 +346,6 @@
         ["BASE-55", "28/10/2026", "Dl*99 Ride", 13.60, "Transporte", "Trabalho", "Crédito", "Base", "synced"],
         ["BASE-56", "28/10/2026", "Uber Uber *Trip Help.U", 5.40, "Transporte", "Trabalho", "Crédito", "Base", "synced"],
 
-        // Compras / Presentes (6 itens = R$ 266,12)
         ["BASE-57", "15/11/2026", "Infpay* Larissa Alves", 120.00, "Compras / Presentes", "", "Crédito", "Base", "synced"],
         ["BASE-58", "12/11/2026", "Casa Oriente", 19.90, "Compras / Presentes", "", "Crédito", "Base", "synced"],
         ["BASE-59", "04/11/2026", "Casa Oriente", 14.90, "Compras / Presentes", "", "Crédito", "Base", "synced"],
@@ -360,7 +353,6 @@
         ["BASE-61", "01/11/2026", "Tiktok Shop *Jyacessor", 14.49, "Compras / Presentes", "", "Crédito", "Base", "synced"],
         ["BASE-62", "01/11/2026", "Tiktok Shop *Pontocent - Parcela 1/4", 61.23, "Compras / Presentes", "", "Crédito", "Base", "synced"],
 
-        // Conveniência / Dia a dia (20 itens = R$ 228,42)
         ["BASE-63", "20/11/2026", "Oxxo Galero", 12.40, "Conveniência / Dia a dia", "", "Crédito", "Base", "synced"],
         ["BASE-64", "20/11/2026", "Lojas Americanas", 2.99, "Conveniência / Dia a dia", "", "Crédito", "Base", "synced"],
         ["BASE-65", "17/11/2026", "Vend Perto Machines", 9.28, "Conveniência / Dia a dia", "", "Crédito", "Base", "synced"],
@@ -380,7 +372,6 @@
         ["BASE-79", "29/10/2026", "Shopping Sp Market", 6.69, "Conveniência / Dia a dia", "", "Crédito", "Base", "synced"],
         ["BASE-80", "29/10/2026", "Oxxo Galero", 14.48, "Conveniência / Dia a dia", "", "Crédito", "Base", "synced"],
 
-        // Saúde / Cuidados (3 itens = R$ 126,78)
         ["BASE-81", "19/11/2026", "Raia Drogasil", 45.28, "Saúde / Cuidados", "", "Crédito", "Base", "synced"],
         ["BASE-82", "19/11/2026", "Drogaetica", 16.50, "Saúde / Cuidados", "", "Crédito", "Base", "synced"],
         ["BASE-83", "03/11/2026", "Carbella Studio Hair", 65.00, "Saúde / Cuidados", "", "Crédito", "Base", "synced"]
@@ -771,7 +762,11 @@
       }
 
       function esc(s) {
-        return String(s || "").replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """);
+        return String(s || "")
+          .replace(/\u0026/g, "\u0026amp;")
+          .replace(/\u003c/g, "\u0026lt;")
+          .replace(/\u003e/g, "\u0026gt;")
+          .replace(/\u0022/g, "\u0026quot;");
       }
 
       function renderApp() {
@@ -973,7 +968,6 @@
         }
       });
 
-      // Auto-sync ao abrir, a cada 20s enquanto visível e imediatamente ao voltar para a aba/app
       renderApp();
       syncPull(false);
       setInterval(() => {
