@@ -80,6 +80,15 @@ function fmtDataBR_(v) {
   return s;
 }
 
+// A planilha está com idioma en_US: texto "12/11/2026" seria lido como 11/dez. Por isso as datas
+// são gravadas como Date de verdade (formato de exibição dd/MM/yyyy) e nunca como texto.
+function paraDataPlanilha_(v) {
+  const br = fmtDataBR_(v);
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return v;
+  return Utilities.parseDate(m[3] + "-" + m[2] + "-" + m[1], TZ, "yyyy-MM-dd");
+}
+
 function hojeBR_() {
   return Utilities.formatDate(new Date(), TZ, "dd/MM/yyyy");
 }
@@ -226,7 +235,7 @@ function inserirNaPlanilha(item, appId) {
 
   sheet.getRange(novaLinha, 1, 1, NUM_COLS).setValues([[
     novoId,
-    fmtDataBR_(item.data),
+    paraDataPlanilha_(item.data),
     item.estabelecimento,
     arredondar_(item.valor),
     item.categoria,
@@ -237,6 +246,7 @@ function inserirNaPlanilha(item, appId) {
   ]]);
 
   sheet.getRange(novaLinha, COL.VALOR).setNumberFormat("R$ #,##0.00");
+  sheet.getRange(novaLinha, COL.DATA).setNumberFormat("dd/MM/yyyy");
   sheet.getRange(novaLinha + 1, COL.VALOR).setFormula("=SUM(D2:D" + novaLinha + ")");
 
   return { ok: true, id: novoId, item: item };
@@ -281,9 +291,10 @@ function reescreverLancamentos_(sheet, parcelas) {
 
   if (n > 0) {
     const linhas = parcelas.map(function (p, i) {
-      return [i + 1, p.data, p.desc, p.valor, p.cat, p.subtipo || "", p.origem, p.obs, ""];
+      return [i + 1, paraDataPlanilha_(p.data), p.desc, p.valor, p.cat, p.subtipo || "", p.origem, p.obs, ""];
     });
     sheet.getRange(2, 1, n, NUM_COLS).setValues(linhas);
+    sheet.getRange(2, COL.DATA, n, 1).setNumberFormat("dd/MM/yyyy");
     // Formatação das linhas de lançamento: copia da linha 2 (modelo) quando existir mais de uma parcela
     if (n > 1 && totalAntigo > 2) sheet.getRange(2, 1, 1, NUM_COLS).copyFormatToRange(sheet, 1, NUM_COLS, 3, n + 1);
     sheet.getRange(2, COL.VALOR, n, 1).setNumberFormat("R$ #,##0.00");
