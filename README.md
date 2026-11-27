@@ -13,7 +13,8 @@ js/
   installments.js     leitura de "Parcela X/Y"
   cycle.js            rótulo do ciclo (fallback local)
   state.js            estado, cache local e consolidação dos lançamentos
-  parser.js           interpretação local de comandos (fallback offline)
+  parser.js           interpretação local de comandos (fallback offline) e "guardei X na caixinha"
+  goals.js            metas do mês e desconto do dinheiro guardado
   api.js              chamadas ao Apps Script
   actions.js          lançar gasto, sincronizar, fechar fatura
   voice.js            microfone (Web Speech API)
@@ -36,6 +37,15 @@ Ao fechar, o script:
 4. avança o ciclo e renomeia a aba `Resumo e Tetos/<Mês-Ano>`.
 
 O ciclo vigente fica guardado nas propriedades do script (`CICLO_ATUAL`). Valor inicial: `CICLO_INICIAL` em `Code.gs`.
+
+## Dinheiro guardado (aba no app)
+
+Compras no crédito cujo dinheiro já foi separado na caixinha. O valor é descontado da fatura ao conferir as metas:
+
+- **Meta 1:** teto da planilha (soma dos tetos por categoria = R$ 2.270).
+- **Meta 2:** Meta 1 menos o valor a investir (`INVESTIMENTO_MENSAL` em `config.js`, R$ 700) = R$ 1.570.
+
+Registre pela aba **Dinheiro guardado** ou digite/fale `guardei 50 na caixinha do Tiktok`. Os registros ficam na aba `Dinheiro Guardado` da planilha (id, data, ciclo, desc, valor) e cada um pertence ao ciclo em que foi feito. Ao fechar a fatura, o guardado do ciclo entra na aba arquivada (`Dinheiro guardado` e `Total líquido`).
 
 ## Atualizar o Apps Script
 

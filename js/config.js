@@ -32,3 +32,6 @@ export const CATEGORY_COLORS = {
   "Conveniência / Dia a dia": "#eab308",
   "Saúde / Cuidados": "#14b8a6"
 };
+
+// Metas mensais: a 1 é o teto da planilha (soma dos tetos por categoria); a 2 reserva o valor a investir.
+export const INVESTIMENTO_MENSAL = 700;

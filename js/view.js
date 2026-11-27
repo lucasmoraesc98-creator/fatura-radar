@@ -3,6 +3,7 @@ import { state, getAllEntries, groupCategories } from "./state.js";
 import { roundCents, formatBRL, esc } from "./utils.js";
 import { upcomingInstallments } from "./installments.js";
 import { fallbackCycleLabel } from "./cycle.js";
+import { evaluateGoals, META_TETO, META_INVESTIR } from "./goals.js";
 
 export function buildDonutSVG(categories, total) {
   const r = 74, cx = 105, cy = 105, circ = 2 * Math.PI * r;
@@ -71,6 +72,90 @@ function closeConfirmCard(label, next, entries, total) {
       ${list}
       <button type="button" class="btn-warn" style="margin-top:12px;width:100%;" data-action="close-confirm" ${busy ? "disabled" : ""}>${busy ? "Fechando..." : "Confirmar fechamento"}</button>
     </div>`;
+}
+
+function goalRow(g) {
+  const color = g.ok ? "#34d399" : "#f43f5e";
+  const width = Math.min(100, g.pct).toFixed(1);
+  const txt = g.ok ? "Dentro · sobra " + formatBRL(g.saldo) : "Fora · estourou " + formatBRL(Math.abs(g.saldo));
+  return `
+    <div class="surface" style="padding:12px;">
+      <div class="row-between tabular" style="font-size:12px;font-weight:700;">
+        <span>${esc(g.nome)}</span><span style="color:${color};">${g.ok ? "✔ Dentro" : "✖ Fora"}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:${color};"></div></div>
+      <div class="row-between tabular" style="margin-top:6px;font-size:11px;color:#9a9aa6;">
+        <span>Limite ${formatBRL(g.limite)}</span><span>${esc(txt)}</span>
+      </div>
+    </div>`;
+}
+
+function tabsBar() {
+  const t = state.tab;
+  return `
+    <div class="tabs">
+      <button type="button" class="tab ${t === "fatura" ? "active" : ""}" data-tab="fatura">Fatura</button>
+      <button type="button" class="tab ${t === "guardado" ? "active" : ""}" data-tab="guardado">Dinheiro guardado</button>
+    </div>`;
+}
+
+function guardadoView(grandTotal, cicloLabel) {
+  const totalGuardado = roundCents(state.guardado.reduce((s, g) => s + g.valor, 0));
+  const ev = evaluateGoals(grandTotal, totalGuardado);
+  const busy = state.isSavingGuardado;
+
+  const list = state.guardado.slice().reverse().map(g => `
+    <div class="row-between tabular" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">
+      <div class="truncate"><span style="font-weight:600;">${esc(g.desc)}</span>
+        <div style="font-size:10px;color:#71717a;">${esc(g.data)}</div></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <span style="font-weight:700;color:#6ee7b7;">${formatBRL(g.valor)}</span>
+        <button type="button" class="btn-undo" data-remove-guardado="${esc(g.id)}" ${busy ? "disabled" : ""}>Remover</button>
+      </div>
+    </div>`).join("") || `<div style="padding:10px 0;font-size:12px;color:#71717a;">Nada guardado neste ciclo ainda.</div>`;
+
+  const hist = state.historico.map(h => {
+    const liquido = h.gasto == null ? null : roundCents(h.gasto - h.guardado);
+    const m1 = liquido == null ? null : liquido <= META_TETO;
+    const m2 = liquido == null ? null : liquido <= META_INVESTIR;
+    const chip = (ok, n) => ok == null ? "" : `<span class="chip ${ok ? "chip-ok" : "chip-bad"}">Meta ${n} ${ok ? "✔" : "✖"}</span>`;
+    return `
+      <div class="surface tabular" style="padding:12px;">
+        <div class="row-between" style="font-size:13px;font-weight:700;"><span>${esc(h.label)}</span>${liquido == null ? "" : `<span>${formatBRL(liquido)}</span>`}</div>
+        <div style="margin-top:4px;font-size:11px;color:#9a9aa6;">${h.gasto == null ? "" : "Fatura " + formatBRL(h.gasto) + " · "}Guardado ${formatBRL(h.guardado)}</div>
+        <div style="margin-top:6px;">${chip(m1, 1)}${chip(m2, 2)}</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="card">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Dinheiro guardado — ${esc(cicloLabel)}</div>
+      <div style="margin-top:4px;font-size:12px;color:#9a9aa6;">Compras no crédito cujo dinheiro você já separou na caixinha. O valor é descontado da fatura ao conferir as metas.</div>
+      <div class="grid-2" style="margin-top:12px;">
+        <div class="surface tabular" style="padding:11px;"><div style="font-size:11px;color:#9a9aa6;">Fatura</div><div style="font-size:16px;font-weight:700;">${formatBRL(ev.gasto)}</div></div>
+        <div class="surface tabular" style="padding:11px;"><div style="font-size:11px;color:#9a9aa6;">Guardado</div><div style="font-size:16px;font-weight:700;color:#6ee7b7;">− ${formatBRL(ev.guardado)}</div></div>
+      </div>
+      <div class="surface tabular" style="padding:12px;margin-top:10px;text-align:center;">
+        <div style="font-size:11px;text-transform:uppercase;color:#9a9aa6;">A pagar da fatura (líquido)</div>
+        <div style="margin-top:2px;font-size:26px;font-weight:800;">${formatBRL(ev.liquido)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px;">${goalRow(ev.meta1)}${goalRow(ev.meta2)}</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#d4d4d8;">Guardar na caixinha</div>
+      <div class="cmd-bar">
+        <input id="guardValor" class="cmd-input" type="text" inputmode="decimal" placeholder="Valor (ex.: 61,23)" style="max-width:120px;" />
+        <input id="guardDesc" class="cmd-input" type="text" placeholder="O que foi (ex.: Tiktok)" />
+      </div>
+      <button type="button" class="btn-warn" style="margin-top:8px;width:100%;" data-action="guardar" ${busy ? "disabled" : ""}>${busy ? "Gravando..." : "Guardar"}</button>
+      <div style="margin-top:6px;font-size:11px;color:#71717a;">Também vale falar ou digitar no campo principal: "guardei 50 na caixinha do Tiktok".</div>
+      ${state.guardadoMsg ? `<div style="margin-top:6px;font-size:12px;color:#9a9aa6;">${esc(state.guardadoMsg)}</div>` : ""}
+      <div style="margin-top:10px;">${list}</div>
+    </div>
+
+    ${hist ? `<div class="card"><div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#d4d4d8;margin-bottom:8px;">Ciclos anteriores</div><div style="display:flex;flex-direction:column;gap:9px;">${hist}</div></div>` : ""}
+  `;
 }
 
 export function renderApp() {
@@ -153,7 +238,19 @@ export function renderApp() {
       </div>`;
   }).join("");
 
+  const keepV = document.getElementById("guardValor");
+  const keepD = document.getElementById("guardDesc");
+  const savedV = keepV ? keepV.value : "";
+  const savedD = keepD ? keepD.value : "";
+
+  const totalGuardadoMain = roundCents(state.guardado.reduce((s, g) => s + g.valor, 0));
+  const evMain = evaluateGoals(grandTotal, totalGuardadoMain);
+  const netLine = totalGuardadoMain > 0
+    ? `<div class="tabular" style="margin-top:6px;font-size:12px;color:#9a9aa6;">Guardado − ${formatBRL(totalGuardadoMain)} · <strong style="color:#f4f4f6;">Líquido ${formatBRL(evMain.liquido)}</strong></div>` : "";
+  const metaChips = `<div style="margin-top:6px;"><span class="chip ${evMain.meta1.ok ? "chip-ok" : "chip-bad"}">Meta 1 ${evMain.meta1.ok ? "✔" : "✖"}</span><span class="chip ${evMain.meta2.ok ? "chip-ok" : "chip-bad"}">Meta 2 ${evMain.meta2.ok ? "✔" : "✖"}</span></div>`;
+
   root.innerHTML = `
+    ${tabsBar()}
     <div class="card" style="text-align:center;display:flex;flex-direction:column;gap:10px;">
       <div class="row-between">
         <span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#34d399;">Fatura Radar — ${esc(cicloLabel)}</span>
@@ -174,6 +271,7 @@ export function renderApp() {
       </div>
     </div>
 
+    ${state.tab === "guardado" ? guardadoView(grandTotal, cicloLabel) : `
     ${pendingCloseBanner(cicloLabel, nextLabel)}
     ${closeConfirmCard(cicloLabel, nextLabel, entries, grandTotal)}
     ${rideCard()}
@@ -193,6 +291,7 @@ export function renderApp() {
       </div>
       <div class="tabular" style="margin-top:2px;font-size:28px;font-weight:800;letter-spacing:-0.02em;">${formatBRL(grandTotal)}</div>
       <div class="tabular" style="font-size:12px;color:#9a9aa6;">${entries.length} lançamentos · Crédito: ${formatBRL(creditTotal)} · Débito: ${formatBRL(debitTotal)}</div>
+      ${netLine}${metaChips}
       ${closesText ? `<div style="margin-top:2px;font-size:11px;color:#71717a;">${esc(closesText)}</div>` : ""}
 
       <div class="grid-2" style="margin-top:12px;">
@@ -216,6 +315,11 @@ export function renderApp() {
       </div>
 
       <div style="display:flex;flex-direction:column;gap:9px;">${catsHtml}</div>
-    </div>
+    </div>`}
   `;
+
+  const nv = document.getElementById("guardValor");
+  const nd = document.getElementById("guardDesc");
+  if (nv) nv.value = savedV;
+  if (nd) nd.value = savedD;
 }

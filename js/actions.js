@@ -1,8 +1,9 @@
 // Ações do app: lançar gasto, sincronizar com a planilha e fechar a fatura
 import { state, saveLocal, saveCiclo, render, setFeedback } from "./state.js";
 import { roundCents, formatBRL, todayBR, nowTimeBR, formatDateBR, dedupKey } from "./utils.js";
-import { flushPendingQueue, fetchSheet, sendCommand, closeInvoiceRemote } from "./api.js";
+import { flushPendingQueue, fetchSheet, sendCommand, closeInvoiceRemote, guardarRemote, removerGuardadoRemote } from "./api.js";
 import { parseCommandFallback } from "./parser.js";
+import { parseGuardado } from "./parser.js";
 
 const hasPending = () => state.addedEntries.some(it => it.syncStatus !== "synced");
 
@@ -42,6 +43,8 @@ export async function syncPull(silent) {
       });
       dropSyncedLocal();
 
+      if (Array.isArray(data.guardado)) state.guardado = data.guardado;
+      if (Array.isArray(data.historico)) state.historico = data.historico;
       if (data.ciclo) {
         state.ciclo = data.ciclo;
         saveCiclo();
@@ -92,6 +95,12 @@ export function removeLocalEntry(id) {
 export async function processCommand(text) {
   const clean = (text || "").trim();
   if (!clean || state.isSendingAI) return;
+
+  const g = parseGuardado(clean);
+  if (g) {
+    await guardarDinheiro(g.valor, g.desc);
+    return;
+  }
 
   state.isSendingAI = true;
   setFeedback('Gemini interpretando "' + clean + '" e gravando na planilha...', "ok");
@@ -217,4 +226,49 @@ export async function confirmClose() {
     render();
   }
   await syncPull(true);
+}
+
+// ---------- Dinheiro guardado ----------
+export function setTab(tab) {
+  state.tab = tab;
+  render();
+}
+
+export async function guardarDinheiro(valor, desc) {
+  const v = roundCents(valor);
+  if (!(v > 0) || state.isSavingGuardado) return;
+  state.isSavingGuardado = true;
+  state.guardadoMsg = "Guardando " + formatBRL(v) + "...";
+  setFeedback(state.guardadoMsg, "ok");
+  render();
+  try {
+    const data = await guardarRemote(v, desc);
+    if (!data || !data.ok) throw new Error((data && data.erro) || "Falha ao gravar na planilha.");
+    state.guardadoMsg = "Guardado " + formatBRL(v) + (desc ? " (" + desc + ")" : "") + ".";
+    setFeedback(state.guardadoMsg, "ok");
+    await syncPull(true);
+  } catch (err) {
+    state.guardadoMsg = "Não consegui guardar: " + (err && err.message ? err.message : "sem conexão") + " Tente de novo.";
+    setFeedback(state.guardadoMsg, "warn");
+  } finally {
+    state.isSavingGuardado = false;
+    render();
+  }
+}
+
+export async function removerGuardado(id) {
+  if (state.isSavingGuardado) return;
+  state.isSavingGuardado = true;
+  render();
+  try {
+    const data = await removerGuardadoRemote(id);
+    if (!data || !data.ok) throw new Error((data && data.erro) || "Falha ao remover.");
+    state.guardadoMsg = "Registro removido.";
+    await syncPull(true);
+  } catch (err) {
+    state.guardadoMsg = "Não consegui remover: " + (err && err.message ? err.message : "sem conexão");
+  } finally {
+    state.isSavingGuardado = false;
+    render();
+  }
 }

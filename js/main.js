@@ -4,9 +4,10 @@ import { state, setRenderer, render, setFeedback } from "./state.js";
 import { renderApp } from "./view.js";
 import {
   syncPull, processCommand, removeLocalEntry, confirmRide, cancelRide,
-  openCloseConfirm, cancelClose, confirmClose
+  openCloseConfirm, cancelClose, confirmClose, setTab, guardarDinheiro, removerGuardado
 } from "./actions.js";
 import { toggleVoice } from "./voice.js";
+import { extractNumber } from "./parser.js";
 
 setRenderer(renderApp);
 const app = document.getElementById("app");
@@ -20,7 +21,23 @@ function submitFromInput() {
   }
 }
 
+function submitGuardado() {
+  const v = document.getElementById("guardValor");
+  const d = document.getElementById("guardDesc");
+  const valor = v ? extractNumber(v.value) : null;
+  if (!valor) {
+    state.guardadoMsg = "Informe um valor válido (ex.: 61,23).";
+    render();
+    return;
+  }
+  const desc = d && d.value.trim() ? d.value.trim() : "Guardado na caixinha";
+  if (v) v.value = "";
+  if (d) d.value = "";
+  guardarDinheiro(valor, desc);
+}
+
 const handlers = {
+  guardar: submitGuardado,
   mic: toggleVoice,
   refresh: () => syncPull(false),
   "submit-cmd": submitFromInput,
@@ -33,6 +50,10 @@ const handlers = {
 };
 
 app.addEventListener("click", e => {
+  const tabBtn = e.target.closest("[data-tab]");
+  if (tabBtn) { setTab(tabBtn.getAttribute("data-tab")); return; }
+  const rmBtn = e.target.closest("[data-remove-guardado]");
+  if (rmBtn) { removerGuardado(rmBtn.getAttribute("data-remove-guardado")); return; }
   const undoBtn = e.target.closest("[data-undo]");
   if (undoBtn) {
     e.stopPropagation();

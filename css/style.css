@@ -269,3 +269,38 @@ html, body {
   font-size: 12px;
   color: var(--muted);
 }
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  padding: 9px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab.active { background: rgba(16, 185, 129, 0.18); color: var(--accent-light); }
+
+.chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chip-ok { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
+.chip-bad { background: rgba(244, 63, 94, 0.18); color: #fda4af; }

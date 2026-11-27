@@ -69,3 +69,13 @@ export async function closeInvoiceRemote() {
   const res = await postJSON({ acao: "fechar_fatura" }, CLOSE_TIMEOUT_MS);
   return res.json();
 }
+
+export async function guardarRemote(valor, desc) {
+  const res = await postJSON({ acao: "guardar", valor, desc }, COMMAND_TIMEOUT_MS);
+  return res.json();
+}
+
+export async function removerGuardadoRemote(id) {
+  const res = await postJSON({ acao: "remover_guardado", id }, COMMAND_TIMEOUT_MS);
+  return res.json();
+}

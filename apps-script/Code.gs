@@ -21,6 +21,7 @@
 // ============================================================
 const SHEET_LANCAMENTOS = "Lancamentos";
 const SHEET_RESUMO_ANUAL = "Resumo Anual";
+const SHEET_GUARDADO = "Dinheiro Guardado";
 const PREFIXO_RESUMO_MENSAL = "Resumo e Tetos/";
 const TZ = "America/Sao_Paulo";
 const DIA_FECHAMENTO = 27;
@@ -38,6 +39,7 @@ const MESES_NOME = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
 const COL = { ID: 1, DATA: 2, DESC: 3, VALOR: 4, CAT: 5, SUBTIPO: 6, ORIGEM: 7, OBS: 8, APPID: 9 };
 const NUM_COLS = 9;
 
+const CABECALHO_GUARDADO = ["id", "data", "ciclo", "desc", "valor"];
 const CABECALHO_ARQUIVO = ["id", "date", "desc", "val", "cat", "subtipo", "meioPagamento", "origem"];
 
 const CATEGORIAS = [
@@ -395,6 +397,106 @@ function gerarProximasParcelas_(itens, cicloFechado, cicloNovo, dataBase) {
 }
 
 // ============================================================
+// 6b. DINHEIRO GUARDADO
+//     Compras no crédito cujo dinheiro já foi separado ("caixinha") para pagar a fatura.
+//     Cada linha pertence a um ciclo; o valor é descontado do total ao comparar com as metas.
+// ============================================================
+function obterAbaGuardado_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(SHEET_GUARDADO);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_GUARDADO);
+    sh.getRange(1, 1, 1, CABECALHO_GUARDADO.length).setValues([CABECALHO_GUARDADO]).setFontWeight("bold");
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function lerGuardado_() {
+  const sh = obterAbaGuardado_();
+  const ultima = sh.getLastRow();
+  if (ultima < 2) return [];
+  return sh.getRange(2, 1, ultima - 1, CABECALHO_GUARDADO.length).getValues()
+    .filter(function (r) { return String(r[0]).trim() && numero_(r[4]) !== 0; })
+    .map(function (r) {
+      return { id: String(r[0]), data: fmtDataBR_(r[1]), ciclo: String(r[2]), desc: String(r[3]), valor: arredondar_(numero_(r[4])) };
+    });
+}
+
+function totalGuardadoCiclo_(ciclo) {
+  return arredondar_(lerGuardado_()
+    .filter(function (g) { return g.ciclo === ciclo; })
+    .reduce(function (s, g) { return s + g.valor; }, 0));
+}
+
+function guardarDinheiro_(valor, desc) {
+  const v = arredondar_(numero_(valor));
+  if (!(v > 0)) throw new Error("Informe um valor maior que zero.");
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error("A planilha está em uso. Tente novamente em instantes.");
+  try {
+    const sh = obterAbaGuardado_();
+    const linha = sh.getLastRow() + 1;
+    const id = "G-" + new Date().getTime();
+    sh.getRange(linha, 1, 1, CABECALHO_GUARDADO.length).setValues([[
+      id, paraDataPlanilha_(hojeBR_()), cicloAtual_(), String(desc || "Guardado na caixinha"), v
+    ]]);
+    sh.getRange(linha, 2).setNumberFormat("dd/MM/yyyy");
+    sh.getRange(linha, 5).setNumberFormat("R$ #,##0.00");
+    SpreadsheetApp.flush();
+    return { ok: true, id: id, guardado: lerGuardado_() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function removerGuardado_(id) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error("A planilha está em uso. Tente novamente em instantes.");
+  try {
+    const sh = obterAbaGuardado_();
+    const ultima = sh.getLastRow();
+    if (ultima >= 2) {
+      const ids = sh.getRange(2, 1, ultima - 1, 1).getValues();
+      for (let i = ids.length - 1; i >= 0; i--) {
+        if (String(ids[i][0]) === String(id)) { sh.deleteRow(i + 2); break; }
+      }
+    }
+    SpreadsheetApp.flush();
+    return { ok: true, guardado: lerGuardado_() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Total de uma fatura já arquivada (aba Fatura_<Mês>_<Ano>): soma os lançamentos acima de "Total Geral". */
+function totalArquivado_(ciclo) {
+  const c = partesCiclo_(ciclo);
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Fatura_" + MESES_ABREV[c.mes - 1] + "_" + c.ano);
+  if (!sh || sh.getLastRow() < 2) return null;
+  const dados = sh.getRange(2, 3, sh.getLastRow() - 1, 2).getValues();
+  let total = 0;
+  for (let i = 0; i < dados.length; i++) {
+    if (String(dados[i][0]).trim() === "Total Geral") break;
+    total += numero_(dados[i][1]);
+  }
+  return arredondar_(total);
+}
+
+/** Ciclos anteriores que tiveram dinheiro guardado, com o gasto arquivado de cada um. */
+function historicoGuardado_(guardado) {
+  const atual = cicloAtual_();
+  const porCiclo = {};
+  guardado.forEach(function (g) {
+    if (g.ciclo === atual) return;
+    porCiclo[g.ciclo] = arredondar_((porCiclo[g.ciclo] || 0) + g.valor);
+  });
+  return Object.keys(porCiclo).sort().map(function (chave) {
+    return { chave: chave, label: rotuloCiclo_(chave), guardado: porCiclo[chave], gasto: totalArquivado_(chave) };
+  });
+}
+
+// ============================================================
 // 7. FECHAMENTO DE FATURA
 // ============================================================
 function resumirItens_(itens) {
@@ -407,7 +509,7 @@ function resumirItens_(itens) {
   return { total: arredondar_(total), qtd: itens.length, porCategoria: porCategoria };
 }
 
-function arquivarItens_(ss, nomeAba, itens) {
+function arquivarItens_(ss, nomeAba, itens, guardado) {
   let sh = ss.getSheetByName(nomeAba);
   if (sh) sh.clear();
   else sh = ss.insertSheet(nomeAba, 1);
@@ -427,6 +529,12 @@ function arquivarItens_(ss, nomeAba, itens) {
   const t = n + 2;
   sh.getRange(t, 3).setValue("Total Geral").setFontWeight("bold");
   sh.getRange(t, 4).setFormula(n > 0 ? "=SUM(D2:D" + (t - 1) + ")" : "=0").setNumberFormat("R$ #,##0.00").setFontWeight("bold");
+  if (guardado > 0) {
+    sh.getRange(t + 1, 3).setValue("Dinheiro guardado").setFontWeight("bold");
+    sh.getRange(t + 1, 4).setValue(-guardado).setNumberFormat("R$ #,##0.00");
+    sh.getRange(t + 2, 3).setValue("Total líquido").setFontWeight("bold");
+    sh.getRange(t + 2, 4).setFormula("=D" + t + "+D" + (t + 1)).setNumberFormat("R$ #,##0.00").setFontWeight("bold");
+  }
   sh.setFrozenRows(1);
   return sh;
 }
@@ -488,7 +596,8 @@ function fecharFatura() {
     const resumo = resumirItens_(itens);
 
     const nomeAba = "Fatura_" + MESES_ABREV[c.mes - 1] + "_" + c.ano;
-    arquivarItens_(ss, nomeAba, itens);
+    const guardado = totalGuardadoCiclo_(ciclo);
+    arquivarItens_(ss, nomeAba, itens, guardado);
     const anual = atualizarResumoAnual_(ss, ciclo, resumo);
 
     const parcelas = gerarProximasParcelas_(itens, ciclo, proximo, dataFechamentoBR_(ciclo));
@@ -501,7 +610,7 @@ function fecharFatura() {
     return {
       ok: true,
       acao: "fechado",
-      fechado: { label: rotulo, aba: nomeAba, total: resumo.total, qtd: resumo.qtd },
+      fechado: { label: rotulo, aba: nomeAba, total: resumo.total, qtd: resumo.qtd, guardado: guardado },
       proximo: {
         label: rotuloCiclo_(proximo),
         total: totalParcelas,
@@ -554,7 +663,14 @@ function doGet(e) {
         origem: r.origem
       };
     });
-    return jsonOut_({ ok: true, items: itens, ciclo: statusCiclo_() });
+    const guardado = lerGuardado_();
+    return jsonOut_({
+      ok: true,
+      items: itens,
+      ciclo: statusCiclo_(),
+      guardado: guardado.filter(function (g) { return g.ciclo === cicloAtual_(); }),
+      historico: historicoGuardado_(guardado)
+    });
   } catch (err) {
     return jsonOut_({ ok: false, erro: String(err) });
   }
@@ -565,6 +681,8 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
 
     if (body.acao === "fechar_fatura") return jsonOut_(fecharFatura());
+    if (body.acao === "guardar") return jsonOut_(guardarDinheiro_(body.valor, body.desc));
+    if (body.acao === "remover_guardado") return jsonOut_(removerGuardado_(body.id));
     if (Array.isArray(body.items)) return jsonOut_(importarItensDoApp_(body.items));
 
     const texto = body.texto || body.message || body.prompt;

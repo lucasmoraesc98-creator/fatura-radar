@@ -46,3 +46,19 @@ export function parseCommandFallback(rawInput) {
   }
   return { ...base, categoria: "Compras / Presentes" };
 }
+
+// "guardei 50 na caixinha (tiktok)" → { valor, desc }. Só reconhece quando há palavra de guardar/caixinha.
+export function parseGuardado(rawInput) {
+  const clean = (rawInput || "").trim();
+  const norm = clean.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (!/\b(guardei|guardado|guardar|caixinha)\b/.test(norm)) return null;
+  const valor = extractNumber(norm);
+  if (!valor) return null;
+  const desc = clean
+    .replace(/(?:r\$\s*)?\d+(?:[.,]\d{1,2})?(\s*reais)?/i, "")
+    .replace(/\b(guardei|guardado|guardar|na|da|do|de|a|para|pra|caixinha|o|valor|dinheiro|que|comprei|no|credito|crédito)\b/gi, " ")
+    .replace(/[()\-:]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return { valor, desc: desc || "Guardado na caixinha" };
+}
