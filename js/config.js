@@ -1,6 +1,6 @@
 // Configuração central do Fatura Radar
 export const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwiVxSFII6alKbvmr2v8gnFr7aO8I3aRXhwB6sfhS4_vTW3MAZQKGjnBgWOtqpFoeU4/exec";
+  "https://script.google.com/macros/s/AKfycbxUvm8v0A3EcsnnskvXBenJi15jx2OGckKZbXLcWh_kn_HyRWwqLdFmei9y-Cp97Rlu/exec";
 
 export const STORAGE_KEY = "fatura_radar_entries_dez_2026_v1";
 export const STORAGE_CICLO_KEY = "fatura_radar_ciclo_v1";
