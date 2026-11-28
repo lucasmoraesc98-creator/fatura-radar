@@ -22,6 +22,7 @@
 const SHEET_LANCAMENTOS = "Lancamentos";
 const SHEET_RESUMO_ANUAL = "Resumo Anual";
 const SHEET_GUARDADO = "Dinheiro Guardado";
+const SHEET_RECORRENTES = "Recorrentes";
 const PREFIXO_RESUMO_MENSAL = "Resumo e Tetos/";
 const TZ = "America/Sao_Paulo";
 const DIA_FECHAMENTO = 27;
@@ -497,6 +498,55 @@ function historicoGuardado_(guardado) {
 }
 
 // ============================================================
+// 6c. RECORRENTES (assinaturas e contas fixas)
+//     Aba "Recorrentes": desc | valor | cat | dia | ativo (sim/não) | obs.
+//     Ao fechar a fatura, cada linha ativa entra no próximo ciclo com o mesmo valor, no dia indicado.
+//     Para mudar valor, pausar ("não") ou incluir uma assinatura, é só editar a aba.
+// ============================================================
+function lerRecorrentes_() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_RECORRENTES);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues()
+    .map(function (r) {
+      return { desc: String(r[0] || "").trim(), valor: arredondar_(numero_(r[1])), cat: String(r[2] || "Assinaturas / IA / Apps"), dia: Number(r[3]) || 1, ativo: String(r[4] || "sim").trim().toLowerCase(), obs: String(r[5] || "") };
+    })
+    .filter(function (r) { return r.desc && r.valor > 0 && r.ativo !== "não" && r.ativo !== "nao" && r.ativo !== "n"; });
+}
+
+/** Data (DD/MM/AAAA) de um dia do mês dentro do ciclo: dias 28-31 caem no mês anterior ao do fechamento. */
+function dataNoCiclo_(ciclo, dia) {
+  const c = partesCiclo_(ciclo);
+  let mes = c.mes;
+  let ano = c.ano;
+  if (dia > DIA_FECHAMENTO) {
+    mes--;
+    if (mes < 1) { mes = 12; ano--; }
+  }
+  const ultimo = new Date(ano, mes, 0).getDate();
+  return pad2_(Math.min(dia, ultimo)) + "/" + pad2_(mes) + "/" + ano;
+}
+
+function gerarRecorrentes_(ciclo) {
+  const chave = function (r) {
+    const d = dataNoCiclo_(ciclo, r.dia).split("/");
+    return d[2] + d[1] + d[0];
+  };
+  return lerRecorrentes_()
+    .sort(function (a, b) { return chave(a) < chave(b) ? -1 : chave(a) > chave(b) ? 1 : 0; })
+    .map(function (r) {
+      return {
+        data: dataNoCiclo_(ciclo, r.dia),
+        desc: r.desc,
+        valor: r.valor,
+        cat: r.cat,
+        subtipo: "Recorrente",
+        origem: "Recorrente",
+        obs: "Recorrente mensal (previsto)"
+      };
+    });
+}
+
+// ============================================================
 // 7. FECHAMENTO DE FATURA
 // ============================================================
 function resumirItens_(itens) {
@@ -600,7 +650,8 @@ function fecharFatura() {
     arquivarItens_(ss, nomeAba, itens, guardado);
     const anual = atualizarResumoAnual_(ss, ciclo, resumo);
 
-    const parcelas = gerarProximasParcelas_(itens, ciclo, proximo, dataFechamentoBR_(ciclo));
+    const parcelas = gerarProximasParcelas_(itens, ciclo, proximo, dataFechamentoBR_(ciclo))
+      .concat(gerarRecorrentes_(proximo));
     reescreverLancamentos_(obterAbaLancamentos_(), parcelas);
     PropertiesService.getScriptProperties().setProperty(PROP_CICLO, proximo);
     atualizarResumoMensal_(ss, proximo);
@@ -668,6 +719,7 @@ function doGet(e) {
       ok: true,
       items: itens,
       ciclo: statusCiclo_(),
+      recorrentes: lerRecorrentes_().map(function (r) { return { desc: r.desc, valor: r.valor, dia: r.dia }; }),
       guardado: guardado.filter(function (g) { return g.ciclo === cicloAtual_(); }),
       historico: historicoGuardado_(guardado)
     });

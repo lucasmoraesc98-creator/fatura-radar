@@ -172,7 +172,7 @@ html, body {
   gap: 10px;
 }
 
-.badge-work, .badge-leisure, .badge-refund {
+.badge-work, .badge-leisure, .badge-refund, .badge-rec {
   display: inline-block;
   margin-left: 5px;
   padding: 1px 6px;
@@ -304,3 +304,5 @@ html, body {
 
 .chip-ok { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
 .chip-bad { background: rgba(244, 63, 94, 0.18); color: #fda4af; }
+
+.badge-rec { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }

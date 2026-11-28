@@ -43,6 +43,7 @@ export async function syncPull(silent) {
       });
       dropSyncedLocal();
 
+      if (Array.isArray(data.recorrentes)) state.recorrentes = data.recorrentes;
       if (Array.isArray(data.guardado)) state.guardado = data.guardado;
       if (Array.isArray(data.historico)) state.historico = data.historico;
       if (data.ciclo) {
@@ -205,7 +206,7 @@ export async function confirmClose() {
     const p = data.proximo;
     let msg = "Fatura " + f.label + " fechada: " + formatBRL(f.total) + " em " + f.qtd + " lançamentos, salva na aba " + f.aba + ". ";
     msg += p.parcelas.length
-      ? p.label + " começa com " + p.parcelas.length + " parcela(s), " + formatBRL(p.total) + "."
+      ? p.label + " começa com " + p.parcelas.length + " lançamento(s) (parcelas e recorrentes), " + formatBRL(p.total) + "."
       : p.label + " começa zerada.";
     if (data.anual && !data.anual.atualizado) msg += " Resumo Anual: " + data.anual.motivo;
     setFeedback(msg, "ok");

@@ -38,6 +38,10 @@ Ao fechar, o script:
 
 O ciclo vigente fica guardado nas propriedades do script (`CICLO_ATUAL`). Valor inicial: `CICLO_INICIAL` em `Code.gs`.
 
+## Recorrentes (assinaturas)
+
+A aba `Recorrentes` da planilha (desc, valor, cat, dia, ativo, obs) lista assinaturas e contas fixas. Ao fechar a fatura, cada linha ativa entra no próximo ciclo com o mesmo valor, no dia indicado, com o rótulo **Recorrente**. Para mudar o valor, pausar (`ativo` = não) ou incluir uma assinatura, edite a aba. Como já entram previstas, não lance de novo a mesma cobrança.
+
 ## Dinheiro guardado (aba no app)
 
 Compras no crédito cujo dinheiro já foi separado na caixinha. O valor é descontado da fatura ao conferir as metas:

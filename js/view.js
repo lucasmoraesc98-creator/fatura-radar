@@ -54,12 +54,18 @@ function pendingCloseBanner(label, next) {
 function closeConfirmCard(label, next, entries, total) {
   if (!state.closeConfirm) return "";
   const parcels = upcomingInstallments(entries);
+  const rec = state.recorrentes || [];
+  const recTotal = roundCents(rec.reduce((s, r) => s + r.valor, 0));
   const parcelsTotal = roundCents(parcels.reduce((s, p) => s + p.valor, 0));
+  const recHtml = rec.length
+    ? `<div style="margin-top:8px;font-size:11px;font-weight:700;text-transform:uppercase;color:#9a9aa6;">Recorrentes (${rec.length})</div>
+       <ul class="list-mini tabular">${rec.map(r => `<li class="row-between"><span class="truncate">${esc(r.desc)} · dia ${r.dia}</span><span style="flex-shrink:0;color:#e4e4e7;">${formatBRL(r.valor)}</span></li>`).join("")}</ul>
+       <div class="tabular" style="margin-top:6px;font-size:12px;color:#9a9aa6;">Recorrentes entram em ${esc(next)}: ${formatBRL(recTotal)}</div>` : "";
   const list = parcels.length
     ? `<ul class="list-mini tabular">${parcels.slice(0, 8).map(p =>
         `<li class="row-between"><span class="truncate">${esc(p.desc)} → ${p.next}/${p.total}</span><span style="flex-shrink:0;color:#e4e4e7;">${formatBRL(p.valor)}</span></li>`).join("")}</ul>
        <div class="tabular" style="margin-top:6px;font-size:12px;color:#9a9aa6;">${esc(next)} começa com ${parcels.length} parcela(s): ${formatBRL(parcelsTotal)}</div>`
-    : `<div style="margin-top:8px;font-size:12px;color:#9a9aa6;">Nenhuma parcela continua: ${esc(next)} começa zerada.</div>`;
+    : `<div style="margin-top:8px;font-size:12px;color:#9a9aa6;">Nenhuma parcela continua.</div>`;
   const busy = state.isClosing;
   return `
     <div class="card card-amber">
@@ -69,7 +75,7 @@ function closeConfirmCard(label, next, entries, total) {
       </div>
       <div class="tabular" style="margin-top:8px;font-size:15px;font-weight:700;">${formatBRL(total)} · ${entries.length} lançamentos</div>
       <div style="margin-top:2px;font-size:12px;color:#9a9aa6;">Tudo é salvo na planilha e o app passa a contar só o próximo ciclo.</div>
-      ${list}
+      ${list}${recHtml}
       <button type="button" class="btn-warn" style="margin-top:12px;width:100%;" data-action="close-confirm" ${busy ? "disabled" : ""}>${busy ? "Fechando..." : "Confirmar fechamento"}</button>
     </div>`;
 }
@@ -184,7 +190,8 @@ export function renderApp() {
   const fbColor = state.feedbackTone === "ok" ? "#6ee7b7" : state.feedbackTone === "warn" ? "#fcd34d" : "#9a9aa6";
 
   const recentHtml = recent.map(it => {
-    const badge = it.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>'
+    const badge = it.subtipo === "Recorrente" ? '<span class="badge-rec">Recorrente</span>'
+      : it.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>'
       : it.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>'
       : it.valor < 0 ? '<span class="badge-refund">Estorno</span>' : "";
     const canUndo = String(it.id).startsWith("VOZ-");
@@ -212,7 +219,7 @@ export function renderApp() {
     const exp = state.selectedCategory === c.name;
     const itemsHtml = exp ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px;">
       ${c.items.map(e => {
-        const b = e.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>' : e.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>' : "";
+        const b = e.subtipo === "Recorrente" ? '<span class="badge-rec">Recorrente</span>' : e.subtipo === "Trabalho" ? '<span class="badge-work">Trabalho</span>' : e.subtipo === "Lazer" ? '<span class="badge-leisure">Lazer</span>' : "";
         return `<div class="row-between tabular" style="font-size:12px;color:#9a9aa6;">
           <span class="truncate">${esc(e.data)} · <strong style="color:#f4f4f6;">${esc(e.estabelecimento)}</strong>${b}</span>
           <span style="font-weight:600;color:${e.valor < 0 ? "#6ee7b7" : "#e4e4e7"};flex-shrink:0;">${formatBRL(e.valor)}</span>

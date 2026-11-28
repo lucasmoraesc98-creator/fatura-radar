@@ -22,6 +22,7 @@ export const state = {
   addedEntries: Array.isArray(savedEntries) ? savedEntries : [],
   remoteEntries: null,
   ciclo: readJSON(STORAGE_CICLO_KEY, null), // { atual, chave, proximo, fechaEm, pendente }
+  recorrentes: [],
   guardado: [],
   historico: [],
   tab: "fatura",
